@@ -1,7 +1,9 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Coffee, UtensilsCrossed, Pizza, Sandwich, CupSoda, Sparkles, Star, Plus, Check } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { toast } from 'sonner';
+
+const asset = (path: string) => `${import.meta.env.BASE_URL}${path.replace(/^\//, '')}`;
 
 interface MenuItem {
   id: number;
@@ -20,7 +22,7 @@ const menuItems: MenuItem[] = [
     name: 'Tropical Coldbrew',
     description: 'Café de especialidad infusionado en frío, syrup de maracuyá, agua con gas y toque exótico de pulpa de mango',
     price: '$4.200',
-    image: '/cafe-latte.jpg',
+    image: asset('cafe-latte.jpg'),
     category: 'novedades',
     popular: true,
   },
@@ -29,7 +31,7 @@ const menuItems: MenuItem[] = [
     name: 'Mocktail de Hibiscus',
     description: 'Refrescante y levemente ácida, elaborada con flor de jamaica, jugo de limón natural y hojas frescas de menta',
     price: '$4.200',
-    image: '/cafe-latte.jpg',
+    image: asset('cafe-latte.jpg'),
     category: 'novedades',
   },
   {
@@ -37,15 +39,15 @@ const menuItems: MenuItem[] = [
     name: 'Leche Dorada',
     description: 'Deliciosa combinación de cúrcuma, especias y leche vegetal o tradicional. Propiedades antiinflamatorias y antioxidantes',
     price: '$3.500',
-    image: '/cafe-latte.jpg',
+    image: asset('cafe-latte.jpg'),
     category: 'novedades',
   },
   {
     id: 4,
     name: 'Torta Helada',
     description: 'Torta congelada de frambuesa con merengue, ideal para refrescarse con algo dulce',
-    price: '$3.000',
-    image: '/postre.jpg',
+    price: '.000',
+    image: asset('postre.jpg'),
     category: 'novedades',
   },
   // TAZAS CON ALMA
@@ -54,7 +56,7 @@ const menuItems: MenuItem[] = [
     name: 'Expresso',
     description: 'Intenso café de grano expresso',
     price: '$2.000',
-    image: '/cafe-latte.jpg',
+    image: asset('cafe-latte.jpg'),
     category: 'tazas',
   },
   {
@@ -62,7 +64,7 @@ const menuItems: MenuItem[] = [
     name: 'Americano',
     description: 'Taza intensa y aromática preparada con café de grano recién molido. Sabor profundo y cuerpo suave',
     price: '$3.190',
-    image: '/cafe-latte.jpg',
+    image: asset('cafe-latte.jpg'),
     category: 'tazas',
   },
   {
@@ -70,7 +72,7 @@ const menuItems: MenuItem[] = [
     name: 'Cortado',
     description: 'Espresso intenso suavizado con un toque de leche caliente. Equilibrio perfecto entre fuerza y cremosidad',
     price: '$3.290',
-    image: '/cafe-latte.jpg',
+    image: asset('cafe-latte.jpg'),
     category: 'tazas',
   },
   {
@@ -78,7 +80,7 @@ const menuItems: MenuItem[] = [
     name: 'Capuccino Tradicional',
     description: 'Clásico y reconfortante: espresso con leche vaporizada y una suave capa de espuma. Cremoso y equilibrado',
     price: '$3.900',
-    image: '/cafe-latte.jpg',
+    image: asset('cafe-latte.jpg'),
     category: 'tazas',
     popular: true,
   },
@@ -87,7 +89,7 @@ const menuItems: MenuItem[] = [
     name: 'Capuccino Sabores',
     description: 'Tu clásico capuchino con un toque único. Disponible en vainilla, canela, caramelo o avellana',
     price: '$4.200',
-    image: '/cafe-latte.jpg',
+    image: asset('cafe-latte.jpg'),
     category: 'tazas',
   },
   {
@@ -95,7 +97,7 @@ const menuItems: MenuItem[] = [
     name: 'Mockaccino',
     description: 'Fusión irresistible de espresso, leche vaporizada y chocolate. Cremoso, suave y con toque dulce',
     price: '$3.900',
-    image: '/cafe-latte.jpg',
+    image: asset('cafe-latte.jpg'),
     category: 'tazas',
   },
   // REFRESCOS DEL DESIERTO
@@ -104,7 +106,7 @@ const menuItems: MenuItem[] = [
     name: 'Milkshake Sabores',
     description: 'Batido a base de helado de vainilla. Elige tu sabor: chocolate, café o cookies',
     price: '$4.500',
-    image: '/cafe-latte.jpg',
+    image: asset('cafe-latte.jpg'),
     category: 'refrescos',
     popular: true,
   },
@@ -113,7 +115,7 @@ const menuItems: MenuItem[] = [
     name: 'Matcha Latte Helado',
     description: 'Refrescante mezcla de té verde matcha con leche fría y hielo. Suave, vegetal y lleno de antioxidantes',
     price: '$4.200',
-    image: '/cafe-latte.jpg',
+    image: asset('cafe-latte.jpg'),
     category: 'refrescos',
   },
   {
@@ -121,7 +123,7 @@ const menuItems: MenuItem[] = [
     name: 'Chai Latte Ice',
     description: 'Infusión especiada de té negro con canela, jengibre, clavo y cardamomo, con leche fría y hielo',
     price: '$4.200',
-    image: '/cafe-latte.jpg',
+    image: asset('cafe-latte.jpg'),
     category: 'refrescos',
   },
   {
@@ -129,7 +131,7 @@ const menuItems: MenuItem[] = [
     name: 'Manzanilla Latte Ice',
     description: 'Infusión relajante de manzanilla con leche fría y hielo. Suave, floral y naturalmente dulce',
     price: '$3.800',
-    image: '/cafe-latte.jpg',
+    image: asset('cafe-latte.jpg'),
     category: 'refrescos',
   },
   {
@@ -137,7 +139,7 @@ const menuItems: MenuItem[] = [
     name: 'Menta Latte Ice',
     description: 'Infusión refrescante de menta con leche fría y hielo. Ligero, herbal y revitalizante',
     price: '$3.800',
-    image: '/cafe-latte.jpg',
+    image: asset('cafe-latte.jpg'),
     category: 'refrescos',
   },
   {
@@ -145,7 +147,7 @@ const menuItems: MenuItem[] = [
     name: 'Bombón Ice',
     description: 'Versión helada del clásico café bombón: espresso sobre leche condensada fría, servido con hielo',
     price: '$4.200',
-    image: '/cafe-latte.jpg',
+    image: asset('cafe-latte.jpg'),
     category: 'refrescos',
   },
   {
@@ -153,7 +155,7 @@ const menuItems: MenuItem[] = [
     name: 'Caramel Latte Ice',
     description: 'Espresso con leche fría, hielo y toque de jarabe de caramelo. Dulce, cremoso y tostado',
     price: '$4.200',
-    image: '/cafe-latte.jpg',
+    image: asset('cafe-latte.jpg'),
     category: 'refrescos',
   },
   {
@@ -161,7 +163,7 @@ const menuItems: MenuItem[] = [
     name: 'Café Helado',
     description: 'Café filtrado o espresso servido bien frío, con hielo y toque de azúcar o leche a elección',
     price: '$4.000',
-    image: '/cafe-latte.jpg',
+    image: asset('cafe-latte.jpg'),
     category: 'refrescos',
   },
   {
@@ -169,7 +171,7 @@ const menuItems: MenuItem[] = [
     name: 'Frapuccino',
     description: 'Batido cremoso de café con hielo, leche y toque dulce. Elige sabor: vainilla, caramelo, chocolate o café clásico',
     price: '$4.000',
-    image: '/cafe-latte.jpg',
+    image: asset('cafe-latte.jpg'),
     category: 'refrescos',
     popular: true,
   },
@@ -178,7 +180,7 @@ const menuItems: MenuItem[] = [
     name: 'Limonadas Sabores',
     description: 'Refrescante limonada con opción de sabores: jengibre, menta o albahaca',
     price: '$4.200',
-    image: '/cafe-latte.jpg',
+    image: asset('cafe-latte.jpg'),
     category: 'refrescos',
   },
   {
@@ -186,57 +188,57 @@ const menuItems: MenuItem[] = [
     name: 'Jugos Naturales',
     description: 'Preparado al momento con pulpa de fruta natural. Elige: piña, mango, melón o berries. Con agua o con leche',
     price: '$4.200',
-    image: '/cafe-latte.jpg',
+    image: asset('cafe-latte.jpg'),
     category: 'refrescos',
   },
   // PIZZAS RONDAS DEL DESIERTO
   {
     id: 22,
     name: 'Pizza Napolitana Artesanal',
-    description: 'Masa hecha por nosotros con queso, tomate, jamón, orégano y aceitunas. Sabor auténtico directo del horno',
-    price: '$5.500',
-    image: '/empanadas.jpg',
+    description: 'Masa hecha por nosotros con queso, tomate, jam?n, or?gano y aceitunas. Sabor aut?ntico directo del horno',
+    price: '.500',
+    image: asset('empanadas.jpg'),
     category: 'pizzas',
     popular: true,
   },
   {
     id: 23,
     name: 'Pizza Colores',
-    description: 'Masa artesanal con queso fundido, jamón, pimentón, tomate cherry y aceitunas. Explosión de color y sabor',
-    price: '$5.500',
-    image: '/empanadas.jpg',
+    description: 'Masa artesanal con queso fundido, jam?n, piment?n, tomate cherry y aceitunas. Explosi?n de color y sabor',
+    price: '.500',
+    image: asset('empanadas.jpg'),
     category: 'pizzas',
   },
   {
     id: 24,
     name: 'Pizza Vegetariana',
-    description: 'Masa artesanal con queso fundido, champiñones salteados, pimentón y aceitunas. Fresca y llena de sabor',
-    price: '$5.500',
-    image: '/empanadas.jpg',
+    description: 'Masa artesanal con queso fundido, champi?ones salteados, piment?n y aceitunas. Fresca y llena de sabor',
+    price: '.500',
+    image: asset('empanadas.jpg'),
     category: 'pizzas',
   },
   {
     id: 25,
     name: 'Pizza Hawaiana',
-    description: 'Masa artesanal con queso fundido, jamón y trozos de piña jugosa. Combinación dulce y salada clásica',
-    price: '$5.500',
-    image: '/empanadas.jpg',
+    description: 'Masa artesanal con queso fundido, jam?n y trozos de pi?a jugosa. Combinaci?n dulce y salada cl?sica',
+    price: '.500',
+    image: asset('empanadas.jpg'),
     category: 'pizzas',
   },
   {
     id: 26,
     name: 'Pizza Choclo & Queso',
-    description: 'Masa artesanal con queso fundido, granos de choclo, pimentón y aceitunas. Suave y colorida',
-    price: '$5.500',
-    image: '/empanadas.jpg',
+    description: 'Masa artesanal con queso fundido, granos de choclo, piment?n y aceitunas. Suave y colorida',
+    price: '.500',
+    image: asset('empanadas.jpg'),
     category: 'pizzas',
   },
   {
     id: 27,
     name: 'Pizza Queso & Albahaca',
-    description: 'Masa artesanal con queso fundido, tomate fresco y albahaca recién cosechada de nuestro huerto',
-    price: '$5.500',
-    image: '/empanadas.jpg',
+    description: 'Masa artesanal con queso fundido, tomate fresco y albahaca reci?n cosechada de nuestro huerto',
+    price: '.500',
+    image: asset('empanadas.jpg'),
     category: 'pizzas',
   },
   {
@@ -244,7 +246,7 @@ const menuItems: MenuItem[] = [
     name: 'Pizza Española',
     description: 'Masa artesanal con queso fundido, jamón, salame, pimentón y tomate fresco. Intensa y colorida',
     price: '$5.500',
-    image: '/empanadas.jpg',
+    image: asset('cafe-latte.jpg'),
     category: 'pizzas',
   },
   // SELLADITOS & TOSTADAS
@@ -253,15 +255,15 @@ const menuItems: MenuItem[] = [
     name: 'Selladito Jamón & Queso',
     description: 'Clásico pan de molde sellado y dorado, relleno con jamón y queso derretido. Simple y sabroso',
     price: '$2.500',
-    image: '/empanadas.jpg',
+    image: asset('cafe-latte.jpg'),
     category: 'selladitos',
   },
   {
     id: 30,
     name: 'Selladito Espinaca & Queso',
     description: 'Pan de molde dorado y sellado, relleno con queso fundido y espinaca salteada. Suave y sabroso',
-    price: '$2.700',
-    image: '/empanadas.jpg',
+    price: '.700',
+    image: asset('empanadas.jpg'),
     category: 'selladitos',
   },
   {
@@ -269,15 +271,15 @@ const menuItems: MenuItem[] = [
     name: 'Selladito Queso & Champiñón',
     description: 'Pan de molde sellado y crujiente, relleno con queso fundido y champiñones salteados',
     price: '$2.700',
-    image: '/empanadas.jpg',
+    image: asset('cafe-latte.jpg'),
     category: 'selladitos',
   },
   {
     id: 32,
     name: 'Tostada Palta',
     description: 'Pan de molde dorado y crujiente, untado con palta fresca. Ideal para un desayuno liviano',
-    price: '$3.000',
-    image: '/empanadas.jpg',
+    price: '.000',
+    image: asset('empanadas.jpg'),
     category: 'selladitos',
     popular: true,
   },
@@ -286,8 +288,8 @@ const menuItems: MenuItem[] = [
     id: 33,
     name: 'Ciabatta Carne',
     description: 'Crujiente pan ciabatta relleno con carne desmenuzada, palta fresca, lechuga y tomate. Sabroso y nutritivo',
-    price: '$7.700',
-    image: '/empanadas.jpg',
+    price: '.700',
+    image: asset('empanadas.jpg'),
     category: 'ciabatta',
     popular: true,
   },
@@ -297,7 +299,7 @@ const menuItems: MenuItem[] = [
     name: 'Bebidas Express',
     description: 'Refrescos clásicos bien fríos: Coca-Cola, Fanta, Sprite',
     price: '$1.000',
-    image: '/cafe-latte.jpg',
+    image: asset('cafe-latte.jpg'),
     category: 'bebidas',
   },
   {
@@ -305,7 +307,7 @@ const menuItems: MenuItem[] = [
     name: 'Bebidas 600ml',
     description: 'Refrescos clásicos bien fríos: Coca-Cola, Fanta, Sprite',
     price: '$1.800',
-    image: '/cafe-latte.jpg',
+    image: asset('cafe-latte.jpg'),
     category: 'bebidas',
   },
   {
@@ -313,7 +315,7 @@ const menuItems: MenuItem[] = [
     name: 'Agua',
     description: 'Agua con o sin gas',
     price: '$1.200',
-    image: '/cafe-latte.jpg',
+    image: asset('cafe-latte.jpg'),
     category: 'bebidas',
   },
 ];
@@ -468,3 +470,6 @@ const Menu = () => {
 };
 
 export default Menu;
+
+
+
