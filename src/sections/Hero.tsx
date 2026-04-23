@@ -1,6 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+﻿import { useEffect, useRef, useState } from 'react';
 import { ChevronDown, MapPin, Clock, Phone, Home, ShoppingBag, Truck, ShoppingCart } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
+
+const asset = (path: string) => `${import.meta.env.BASE_URL}${path.replace(/^\//, '')}`;
 
 const Hero = () => {
   const waveRef1 = useRef<SVGPathElement>(null);
@@ -84,7 +86,7 @@ const Hero = () => {
       {/* Background Image */}
       <div className="absolute inset-0">
         <img
-          src="/hero-cafe.jpg"
+          src={asset('hero-cafe.jpg')}
           alt="Espacio Kihnally"
           className="w-full h-full object-cover"
         />
@@ -139,7 +141,7 @@ const Hero = () => {
           {/* Logo */}
           <div className="mb-8">
             <img
-              src="/logo-kihnally.png"
+              src={asset('logo-kihnally.png')}
               alt="Espacio Kihnally"
               className="h-24 sm:h-32 mx-auto drop-shadow-2xl"
             />
@@ -256,3 +258,6 @@ const Hero = () => {
 };
 
 export default Hero;
+
+
+

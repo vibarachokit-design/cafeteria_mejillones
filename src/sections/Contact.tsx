@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { MapPin, Phone, Clock, Mail, Send, Facebook, Instagram, MessageCircle, Home, ShoppingBag, Truck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
+
+const asset = (path: string) => `${import.meta.env.BASE_URL}${path.replace(/^\//, '')}`;
 
 const contactInfo = [
   {
@@ -201,7 +203,7 @@ const Contact = () => {
             {/* Map Placeholder */}
             <div className="mt-6 rounded-2xl overflow-hidden h-48 bg-ocean-100 relative">
               <img
-                src="/bahia.jpg"
+                src={asset('bahia.jpg')}
                 alt="Ubicación"
                 className="w-full h-full object-cover"
               />
@@ -329,3 +331,6 @@ const Contact = () => {
 };
 
 export default Contact;
+
+
+

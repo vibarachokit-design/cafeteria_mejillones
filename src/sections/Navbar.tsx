@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { Menu, X, ShoppingCart } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
+
+const asset = (path: string) => `${import.meta.env.BASE_URL}${path.replace(/^\//, '')}`;
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -36,7 +38,7 @@ const Navbar = () => {
           {/* Logo */}
           <a href="#inicio" className="flex items-center gap-3 group">
             <img
-              src="/logo-kihnally.png"
+              src={asset('logo-kihnally.png')}
               alt="Espacio Kihnally"
               className={`transition-all duration-300 ${
                 isScrolled ? 'h-12' : 'h-14'
@@ -133,3 +135,6 @@ const Navbar = () => {
 };
 
 export default Navbar;
+
+
+

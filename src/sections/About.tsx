@@ -1,5 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+﻿import { useEffect, useRef, useState } from 'react';
 import { Anchor, Heart, Award, Users, Coffee, Waves } from 'lucide-react';
+
+const asset = (path: string) => `${import.meta.env.BASE_URL}${path.replace(/^\//, '')}`;
 
 const stats = [
   { icon: Heart, value: 5, suffix: '+', label: 'Años de experiencia' },
@@ -44,7 +46,7 @@ const About = () => {
               {/* Main Image */}
               <div className="rounded-3xl overflow-hidden shadow-ocean-lg">
                 <img
-                  src="/bahia.jpg"
+                  src={asset('bahia.jpg')}
                   alt="Bahía de Mejillones"
                   className="w-full h-[500px] object-cover"
                 />
@@ -161,3 +163,6 @@ const About = () => {
 };
 
 export default About;
+
+
+
