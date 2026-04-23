@@ -1,0 +1,172 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 195 80% 97%;
+    --foreground: 195 60% 15%;
+    --card: 0 0% 100%;
+    --card-foreground: 195 60% 15%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 195 60% 15%;
+    --primary: 195 100% 42%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 45 40% 90%;
+    --secondary-foreground: 195 60% 15%;
+    --muted: 195 30% 92%;
+    --muted-foreground: 195 20% 40%;
+    --accent: 175 80% 45%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 195 30% 85%;
+    --input: 195 30% 85%;
+    --ring: 195 100% 42%;
+    --radius: 0.625rem;
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 195 100% 42%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 195 30% 92%;
+    --sidebar-accent-foreground: 195 60% 15%;
+    --sidebar-border: 195 30% 85%;
+    --sidebar-ring: 195 100% 42%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-background text-foreground font-body antialiased;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display;
+  }
+}
+
+@layer components {
+  .text-gradient-ocean {
+    @apply bg-gradient-to-r from-ocean-600 via-ocean-500 to-ocean-400 bg-clip-text text-transparent;
+  }
+  
+  .glass-ocean {
+    @apply bg-white/80 backdrop-blur-xl border border-white/20;
+  }
+  
+  .glass-dark {
+    @apply bg-ocean-900/80 backdrop-blur-xl border border-ocean-700/30;
+  }
+
+  .wave-divider {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    overflow: hidden;
+    line-height: 0;
+  }
+
+  .wave-divider svg {
+    position: relative;
+    display: block;
+    width: calc(100% + 1.3px);
+    height: 80px;
+  }
+
+  .bubble {
+    @apply absolute rounded-full bg-ocean-400/20 backdrop-blur-sm;
+  }
+
+  .card-marine {
+    @apply bg-white/90 backdrop-blur-sm rounded-2xl border border-ocean-200/50 shadow-ocean transition-all duration-300 hover:shadow-ocean-lg hover:-translate-y-1;
+  }
+
+  .btn-ocean {
+    @apply bg-gradient-to-r from-ocean-600 to-ocean-500 text-white font-medium px-6 py-3 rounded-full shadow-ocean hover:shadow-ocean-lg hover:scale-105 transition-all duration-300;
+  }
+
+  .btn-ocean-outline {
+    @apply border-2 border-ocean-500 text-ocean-600 font-medium px-6 py-3 rounded-full hover:bg-ocean-500 hover:text-white transition-all duration-300;
+  }
+
+  .section-padding {
+    @apply px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-20;
+  }
+
+  .nav-link {
+    @apply relative text-ocean-800 hover:text-ocean-600 font-medium transition-colors duration-300 after:absolute after:bottom-0 after:left-0 after:w-0 after:h-0.5 after:bg-ocean-500 after:transition-all after:duration-300 hover:after:w-full;
+  }
+}
+
+@layer utilities {
+  .animate-delay-100 {
+    animation-delay: 100ms;
+  }
+  .animate-delay-200 {
+    animation-delay: 200ms;
+  }
+  .animate-delay-300 {
+    animation-delay: 300ms;
+  }
+  .animate-delay-400 {
+    animation-delay: 400ms;
+  }
+  .animate-delay-500 {
+    animation-delay: 500ms;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  .animate-slide-in-right {
+    animation: slideInRight 0.3s ease-out;
+  }
+
+  @keyframes slideInRight {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+}
+
+/* Scrollbar personalizada */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #e6f7fb;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #00b4d8, #0a4d68);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #0090ad, #052d3d);
+}
+
+/* Selección de texto */
+::selection {
+  background: rgba(0, 180, 216, 0.3);
+  color: #0a4d68;
+}
