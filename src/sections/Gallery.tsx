@@ -1,44 +1,46 @@
 import { useState } from 'react';
 import { Camera, X, ChevronLeft, ChevronRight, Instagram } from 'lucide-react';
 
+const asset = (path: string) => `${import.meta.env.BASE_URL}${path.replace(/^\//, '')}`;
+
 const galleryImages = [
   {
-    src: '/hero-cafe.jpg',
+    src: asset('hero-cafe.jpg'),
     alt: 'Interior de la cafetería con vista al mar',
     category: 'Ambiente',
   },
   {
-    src: '/cafe-latte.jpg',
+    src: asset('cafe-latte.jpg'),
     alt: 'Latte art con diseño de ola',
     category: 'Cafés',
   },
   {
-    src: '/mariscos.jpg',
+    src: asset('mariscos.jpg'),
     alt: 'Paila marina con mejillones frescos',
     category: 'Platos',
   },
   {
-    src: '/empanadas.jpg',
+    src: asset('empanadas.jpg'),
     alt: 'Empanadas de mariscos',
     category: 'Platos',
   },
   {
-    src: '/caldo.jpg',
+    src: asset('caldo.jpg'),
     alt: 'Caldo de mariscos humeante',
     category: 'Platos',
   },
   {
-    src: '/torta.jpg',
+    src: asset('torta.jpg'),
     alt: 'Torta de hojas con frutos rojos',
     category: 'Postres',
   },
   {
-    src: '/postre.jpg',
+    src: asset('postre.jpg'),
     alt: 'Tres leches con caramelo',
     category: 'Postres',
   },
   {
-    src: '/bahia.jpg',
+    src: asset('bahia.jpg'),
     alt: 'Vista panorámica de la bahía',
     category: 'Vistas',
   },
@@ -50,9 +52,10 @@ const Gallery = () => {
   const [activeCategory, setActiveCategory] = useState('Todos');
   const [selectedImage, setSelectedImage] = useState<number | null>(null);
 
-  const filteredImages = activeCategory === 'Todos'
-    ? galleryImages
-    : galleryImages.filter((img) => img.category === activeCategory);
+  const filteredImages =
+    activeCategory === 'Todos'
+      ? galleryImages
+      : galleryImages.filter((img) => img.category === activeCategory);
 
   const openLightbox = (index: number) => {
     setSelectedImage(index);
@@ -66,16 +69,16 @@ const Gallery = () => {
 
   const navigateImage = (direction: 'prev' | 'next') => {
     if (selectedImage === null) return;
-    const newIndex = direction === 'prev'
-      ? (selectedImage - 1 + filteredImages.length) % filteredImages.length
-      : (selectedImage + 1) % filteredImages.length;
+    const newIndex =
+      direction === 'prev'
+        ? (selectedImage - 1 + filteredImages.length) % filteredImages.length
+        : (selectedImage + 1) % filteredImages.length;
     setSelectedImage(newIndex);
   };
 
   return (
     <section id="galeria" className="py-20 bg-ocean-50/50">
       <div className="section-padding max-w-7xl mx-auto">
-        {/* Section Header */}
         <div className="text-center mb-12">
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-ocean-100 rounded-full mb-4">
             <Camera className="w-4 h-4 text-ocean-600" />
@@ -85,12 +88,11 @@ const Gallery = () => {
             Galería
           </h2>
           <p className="text-ocean-600 max-w-2xl mx-auto">
-            Un vistazo a nuestra cafetería, nuestros platillos y las vistas espectaculares 
+            Un vistazo a nuestra cafetería, nuestros platillos y las vistas espectaculares
             que nos rodean en la bahía de Mejillones.
           </p>
         </div>
 
-        {/* Category Filter */}
         <div className="flex justify-center gap-2 mb-10 flex-wrap">
           {categories.map((category) => (
             <button
@@ -107,7 +109,6 @@ const Gallery = () => {
           ))}
         </div>
 
-        {/* Gallery Grid */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {filteredImages.map((image, index) => (
             <div
@@ -133,7 +134,6 @@ const Gallery = () => {
           ))}
         </div>
 
-        {/* Instagram CTA */}
         <div className="text-center mt-12">
           <a
             href="https://instagram.com"
@@ -147,13 +147,11 @@ const Gallery = () => {
         </div>
       </div>
 
-      {/* Lightbox */}
       {selectedImage !== null && (
         <div
           className="fixed inset-0 z-50 bg-ocean-950/95 backdrop-blur-xl flex items-center justify-center"
           onClick={closeLightbox}
         >
-          {/* Close Button */}
           <button
             onClick={closeLightbox}
             className="absolute top-6 right-6 p-3 bg-white/10 backdrop-blur-sm rounded-full text-white hover:bg-white/20 transition-colors z-10"
@@ -161,7 +159,6 @@ const Gallery = () => {
             <X className="w-6 h-6" />
           </button>
 
-          {/* Navigation */}
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -181,7 +178,6 @@ const Gallery = () => {
             <ChevronRight className="w-6 h-6" />
           </button>
 
-          {/* Image */}
           <div
             className="max-w-5xl max-h-[80vh] mx-6"
             onClick={(e) => e.stopPropagation()}
