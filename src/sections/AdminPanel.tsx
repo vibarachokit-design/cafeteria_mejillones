@@ -1,6 +1,17 @@
 import { useMemo, useRef, useState } from 'react';
-import { Settings2, X, Plus, Trash2, RotateCcw, Upload } from 'lucide-react';
+import {
+  Settings2,
+  X,
+  Plus,
+  Trash2,
+  RotateCcw,
+  Upload,
+  Download,
+  FileUp,
+  ChartNoAxesCombined,
+} from 'lucide-react';
 import { useMenu } from '@/context/MenuContext';
+import { useCart } from '@/context/CartContext';
 import {
   availableProductImages,
   asset,
@@ -13,21 +24,85 @@ const ADMIN_SESSION_KEY = 'espacio-kihnally-admin-session';
 const ADMIN_PIN = import.meta.env.VITE_ADMIN_PIN ?? 'kihnally2026';
 
 const AdminPanel = () => {
-  const { products, updateProduct, addProduct, removeProduct, resetProducts } = useMenu();
+  const {
+    products,
+    updateProduct,
+    addProduct,
+    removeProduct,
+    resetProducts,
+    importProducts,
+  } = useMenu();
+  const { salesHistory } = useCart();
+
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedProductId, setSelectedProductId] = useState<number>(products[0]?.id ?? 0);
+  const [selectedProductId, setSelectedProductId] = useState<number>(
+    products[0]?.id ?? 0
+  );
   const [pinInput, setPinInput] = useState('');
   const [isDraggingImage, setIsDraggingImage] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUnlocked, setIsUnlocked] = useState(() => {
     if (typeof window === 'undefined') return false;
     return window.localStorage.getItem(ADMIN_SESSION_KEY) === 'ok';
   });
 
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const backupInputRef = useRef<HTMLInputElement>(null);
+
   const selectedProduct = useMemo(
-    () => products.find((item) => item.id === selectedProductId) ?? products[0] ?? null,
+    () =>
+      products.find((item) => item.id === selectedProductId) ?? products[0] ?? null,
     [products, selectedProductId]
   );
+
+  const todayKey = new Date().toLocaleDateString('sv-SE');
+  const todaysSales = useMemo(
+    () => salesHistory.filter((sale) => sale.closedAt.slice(0, 10) === todayKey),
+    [salesHistory, todayKey]
+  );
+
+  const todaySummary = useMemo(() => {
+    const totalSales = todaysSales.length;
+    const totalRevenue = todaysSales.reduce((sum, sale) => sum + sale.total, 0);
+    const totalProducts = todaysSales.reduce(
+      (sum, sale) =>
+        sum + sale.items.reduce((itemsSum, item) => itemsSum + item.quantity, 0),
+      0
+    );
+
+    const productMap = new Map<
+      string,
+      { quantity: number; revenue: number }
+    >();
+
+    todaysSales.forEach((sale) => {
+      sale.items.forEach((item) => {
+        const current = productMap.get(item.name) ?? { quantity: 0, revenue: 0 };
+        productMap.set(item.name, {
+          quantity: current.quantity + item.quantity,
+          revenue: current.revenue + item.quantity * item.price,
+        });
+      });
+    });
+
+    const topProducts = Array.from(productMap.entries())
+      .map(([name, stats]) => ({ name, ...stats }))
+      .sort((a, b) => b.quantity - a.quantity)
+      .slice(0, 5);
+
+    return {
+      totalSales,
+      totalRevenue,
+      totalProducts,
+      topProducts,
+    };
+  }, [todaysSales]);
+
+  const formatPrice = (price: number) =>
+    new Intl.NumberFormat('es-CL', {
+      style: 'currency',
+      currency: 'CLP',
+      minimumFractionDigits: 0,
+    }).format(price);
 
   const handleFieldChange = <K extends keyof MenuProduct>(
     key: K,
@@ -74,14 +149,13 @@ const AdminPanel = () => {
   const handleLock = () => {
     window.localStorage.removeItem(ADMIN_SESSION_KEY);
     setIsUnlocked(false);
-    setIsOpen(false);
     setPinInput('');
+    setIsOpen(false);
     toast.success('Panel administrador bloqueado');
   };
 
   const handleImageFile = (file?: File) => {
     if (!file || !selectedProduct) return;
-
     if (!file.type.startsWith('image/')) {
       toast.error('Selecciona un archivo de imagen válido');
       return;
@@ -93,11 +167,104 @@ const AdminPanel = () => {
         toast.error('No se pudo leer la imagen');
         return;
       }
-
       handleFieldChange('image', reader.result);
       toast.success('Imagen actualizada');
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleExportDailySales = () => {
+    if (todaysSales.length === 0) {
+      toast.error('No hay ventas cerradas hoy para exportar');
+      return;
+    }
+
+    const rows = [
+      [
+        'Fecha',
+        'Hora',
+        'Mesa',
+        'Producto',
+        'Cantidad',
+        'Precio Unitario',
+        'Subtotal',
+        'Total Mesa',
+      ],
+    ];
+
+    todaysSales.forEach((sale) => {
+      sale.items.forEach((item, index) => {
+        rows.push([
+          sale.closedAt.slice(0, 10),
+          new Date(sale.closedAt).toLocaleTimeString('es-CL', {
+            hour: '2-digit',
+            minute: '2-digit',
+          }),
+          sale.tableId,
+          item.name,
+          String(item.quantity),
+          String(item.price),
+          String(item.price * item.quantity),
+          index === 0 ? String(sale.total) : '',
+        ]);
+      });
+    });
+
+    const csvContent = rows
+      .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(';'))
+      .join('\n');
+
+    const blob = new Blob([`\uFEFF${csvContent}`], {
+      type: 'text/csv;charset=utf-8;',
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `ventas-${todayKey}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    toast.success('Archivo de ventas diarias exportado');
+  };
+
+  const handleBackupExport = () => {
+    const payload = {
+      exportedAt: new Date().toISOString(),
+      products,
+    };
+
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: 'application/json;charset=utf-8;',
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `respaldo-menu-${todayKey}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+    toast.success('Respaldo del menú exportado');
+  };
+
+  const handleBackupImport = (file?: File) => {
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const raw = JSON.parse(String(reader.result));
+        const importedProducts = Array.isArray(raw) ? raw : raw.products;
+
+        if (!Array.isArray(importedProducts) || importedProducts.length === 0) {
+          throw new Error('Formato inválido');
+        }
+
+        importProducts(importedProducts);
+        setSelectedProductId(importedProducts[0]?.id ?? 0);
+        toast.success('Respaldo del menú importado');
+      } catch {
+        toast.error('No se pudo importar el respaldo del menú');
+      }
+    };
+    reader.readAsText(file);
   };
 
   return (
@@ -116,6 +283,7 @@ const AdminPanel = () => {
             className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
             onClick={() => setIsOpen(false)}
           />
+
           {!isUnlocked ? (
             <div className="fixed inset-y-0 right-0 w-full max-w-md bg-white z-50 shadow-2xl p-8 flex flex-col justify-center">
               <button
@@ -130,7 +298,7 @@ const AdminPanel = () => {
                     Panel administrador
                   </h2>
                   <p className="text-ocean-600 mt-2">
-                    Ingresa la clave para editar productos y precios.
+                    Ingresa la clave para editar productos, revisar ventas y respaldar el menú.
                   </p>
                 </div>
                 <input
@@ -138,9 +306,7 @@ const AdminPanel = () => {
                   value={pinInput}
                   onChange={(event) => setPinInput(event.target.value)}
                   onKeyDown={(event) => {
-                    if (event.key === 'Enter') {
-                      handleUnlock();
-                    }
+                    if (event.key === 'Enter') handleUnlock();
                   }}
                   placeholder="Clave de administrador"
                   className="w-full px-4 py-3 border border-ocean-200 rounded-xl focus:outline-none focus:border-ocean-500"
@@ -151,14 +317,10 @@ const AdminPanel = () => {
                 >
                   Entrar
                 </button>
-                <p className="text-xs text-ocean-500">
-                  Esta clave es una protección simple del lado del cliente. Si luego quieres
-                  seguridad real, conviene pasar el panel a backend con autenticación.
-                </p>
               </div>
             </div>
           ) : (
-            <div className="fixed inset-y-0 right-0 w-full max-w-6xl bg-white z-50 shadow-2xl grid grid-cols-1 lg:grid-cols-[320px_1fr]">
+            <div className="fixed inset-y-0 right-0 w-full max-w-7xl bg-white z-50 shadow-2xl grid grid-cols-1 lg:grid-cols-[320px_1fr]">
               <div className="border-r border-ocean-100 p-6 overflow-y-auto">
                 <div className="flex items-center justify-between mb-6">
                   <div>
@@ -166,7 +328,7 @@ const AdminPanel = () => {
                       Administrador
                     </h2>
                     <p className="text-sm text-ocean-600">
-                      Cambia productos y precios sin tocar el código.
+                      Productos, ventas y respaldos.
                     </p>
                   </div>
                   <button
@@ -192,6 +354,34 @@ const AdminPanel = () => {
                     <RotateCcw className="w-4 h-4" />
                     <span>Restaurar menú original</span>
                   </button>
+                  <button
+                    onClick={handleExportDailySales}
+                    className="w-full py-3 border border-ocean-200 text-ocean-700 rounded-xl font-medium flex items-center justify-center gap-2 hover:bg-ocean-50 transition-colors"
+                  >
+                    <ChartNoAxesCombined className="w-4 h-4" />
+                    <span>Exportar ventas diarias</span>
+                  </button>
+                  <button
+                    onClick={handleBackupExport}
+                    className="w-full py-3 border border-ocean-200 text-ocean-700 rounded-xl font-medium flex items-center justify-center gap-2 hover:bg-ocean-50 transition-colors"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>Respaldar menú</span>
+                  </button>
+                  <button
+                    onClick={() => backupInputRef.current?.click()}
+                    className="w-full py-3 border border-ocean-200 text-ocean-700 rounded-xl font-medium flex items-center justify-center gap-2 hover:bg-ocean-50 transition-colors"
+                  >
+                    <FileUp className="w-4 h-4" />
+                    <span>Importar respaldo</span>
+                  </button>
+                  <input
+                    ref={backupInputRef}
+                    type="file"
+                    accept=".json,application/json"
+                    className="hidden"
+                    onChange={(event) => handleBackupImport(event.target.files?.[0])}
+                  />
                   <button
                     onClick={handleLock}
                     className="w-full py-3 border border-red-200 text-red-600 rounded-xl font-medium hover:bg-red-50 transition-colors"
@@ -222,169 +412,249 @@ const AdminPanel = () => {
               </div>
 
               <div className="p-6 lg:p-8 overflow-y-auto">
-                {selectedProduct ? (
-                  <div className="max-w-3xl mx-auto space-y-6">
-                    <div className="flex flex-col sm:flex-row gap-6 items-start">
-                      <img
-                        src={selectedProduct.image}
-                        alt={selectedProduct.name}
-                        className="w-full sm:w-56 h-56 object-cover rounded-3xl shadow-ocean"
-                      />
-                    <div className="flex-1 space-y-2">
-                        <h3 className="font-display text-3xl font-semibold text-ocean-900">
-                          {selectedProduct.name}
-                        </h3>
-                        <p className="text-ocean-600">
-                          ID #{selectedProduct.id}
-                        </p>
-                        <button
-                          onClick={handleDeleteProduct}
-                          className="mt-4 inline-flex items-center gap-2 px-4 py-2 text-red-600 border border-red-200 rounded-xl hover:bg-red-50 transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                          <span>Eliminar producto</span>
-                        </button>
+                <div className="max-w-5xl mx-auto space-y-8">
+                  <section className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <ChartNoAxesCombined className="w-5 h-5 text-ocean-600" />
+                      <h3 className="font-display text-2xl font-semibold text-ocean-900">
+                        Reporte del día
+                      </h3>
                     </div>
-                  </div>
-
-                  <div
-                    onDragOver={(event) => {
-                      event.preventDefault();
-                      setIsDraggingImage(true);
-                    }}
-                    onDragLeave={() => setIsDraggingImage(false)}
-                    onDrop={(event) => {
-                      event.preventDefault();
-                      setIsDraggingImage(false);
-                      handleImageFile(event.dataTransfer.files?.[0]);
-                    }}
-                    className={`border-2 border-dashed rounded-2xl p-5 transition-colors ${
-                      isDraggingImage
-                        ? 'border-ocean-500 bg-ocean-50'
-                        : 'border-ocean-200 bg-white'
-                    }`}
-                  >
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                      <div>
-                        <p className="font-medium text-ocean-900">
-                          Subir foto del producto
-                        </p>
-                        <p className="text-sm text-ocean-600">
-                          Arrastra una imagen aquí o súbela desde tu equipo.
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="bg-ocean-50 rounded-2xl p-5">
+                        <p className="text-sm text-ocean-600">Mesas cerradas hoy</p>
+                        <p className="text-3xl font-display font-semibold text-ocean-900">
+                          {todaySummary.totalSales}
                         </p>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => fileInputRef.current?.click()}
-                        className="inline-flex items-center justify-center gap-2 px-4 py-3 bg-ocean-500 text-white rounded-xl font-medium hover:bg-ocean-600 transition-colors"
-                      >
-                        <Upload className="w-4 h-4" />
-                        <span>Subir imagen</span>
-                      </button>
-                    </div>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(event) => handleImageFile(event.target.files?.[0])}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                      <label className="space-y-2">
-                        <span className="text-sm font-medium text-ocean-700">Nombre</span>
-                        <input
-                          value={selectedProduct.name}
-                          onChange={(event) => handleFieldChange('name', event.target.value)}
-                          className="w-full px-4 py-3 border border-ocean-200 rounded-xl focus:outline-none focus:border-ocean-500"
-                        />
-                      </label>
-                      <label className="space-y-2">
-                        <span className="text-sm font-medium text-ocean-700">Precio</span>
-                        <input
-                          type="number"
-                          min="0"
-                          value={selectedProduct.price}
-                          onChange={(event) =>
-                            handleFieldChange('price', Number(event.target.value) || 0)
-                          }
-                          className="w-full px-4 py-3 border border-ocean-200 rounded-xl focus:outline-none focus:border-ocean-500"
-                        />
-                      </label>
+                      <div className="bg-ocean-50 rounded-2xl p-5">
+                        <p className="text-sm text-ocean-600">Ingresos de hoy</p>
+                        <p className="text-3xl font-display font-semibold text-ocean-900">
+                          {formatPrice(todaySummary.totalRevenue)}
+                        </p>
+                      </div>
+                      <div className="bg-ocean-50 rounded-2xl p-5">
+                        <p className="text-sm text-ocean-600">Productos vendidos</p>
+                        <p className="text-3xl font-display font-semibold text-ocean-900">
+                          {todaySummary.totalProducts}
+                        </p>
+                      </div>
                     </div>
 
-                    <label className="space-y-2 block">
-                      <span className="text-sm font-medium text-ocean-700">Descripción</span>
-                      <textarea
-                        value={selectedProduct.description}
-                        onChange={(event) =>
-                          handleFieldChange('description', event.target.value)
-                        }
-                        rows={4}
-                        className="w-full px-4 py-3 border border-ocean-200 rounded-xl focus:outline-none focus:border-ocean-500"
-                      />
-                    </label>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                      <label className="space-y-2">
-                        <span className="text-sm font-medium text-ocean-700">Categoría</span>
-                        <select
-                          value={selectedProduct.category}
-                          onChange={(event) =>
-                            handleFieldChange('category', event.target.value)
-                          }
-                          className="w-full px-4 py-3 border border-ocean-200 rounded-xl focus:outline-none focus:border-ocean-500"
-                        >
-                          {menuCategories.map((category) => (
-                            <option key={category.id} value={category.id}>
-                              {category.name}
-                            </option>
+                    <div className="bg-white border border-ocean-100 rounded-3xl p-5">
+                      <p className="font-semibold text-ocean-900 mb-4">
+                        Productos más vendidos hoy
+                      </p>
+                      {todaySummary.topProducts.length > 0 ? (
+                        <div className="space-y-3">
+                          {todaySummary.topProducts.map((product) => (
+                            <div
+                              key={product.name}
+                              className="flex items-center justify-between gap-4"
+                            >
+                              <div>
+                                <p className="font-medium text-ocean-900">{product.name}</p>
+                                <p className="text-sm text-ocean-500">
+                                  {product.quantity} vendidos
+                                </p>
+                              </div>
+                              <p className="font-semibold text-ocean-700">
+                                {formatPrice(product.revenue)}
+                              </p>
+                            </div>
                           ))}
-                        </select>
-                      </label>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-ocean-500">
+                          Aún no hay ventas cerradas hoy en este dispositivo.
+                        </p>
+                      )}
+                    </div>
+                  </section>
 
-                      <label className="space-y-2">
-                        <span className="text-sm font-medium text-ocean-700">Imagen</span>
-                        <select
-                          value={selectedProduct.image}
-                          onChange={(event) =>
-                            handleFieldChange('image', event.target.value)
-                          }
-                          className="w-full px-4 py-3 border border-ocean-200 rounded-xl focus:outline-none focus:border-ocean-500"
+                  <section className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <Settings2 className="w-5 h-5 text-ocean-600" />
+                      <h3 className="font-display text-2xl font-semibold text-ocean-900">
+                        Editor de productos
+                      </h3>
+                    </div>
+
+                    {selectedProduct ? (
+                      <div className="space-y-6">
+                        <div className="flex flex-col sm:flex-row gap-6 items-start">
+                          <img
+                            src={selectedProduct.image}
+                            alt={selectedProduct.name}
+                            className="w-full sm:w-56 h-56 object-cover rounded-3xl shadow-ocean"
+                          />
+                          <div className="flex-1 space-y-2">
+                            <h4 className="font-display text-3xl font-semibold text-ocean-900">
+                              {selectedProduct.name}
+                            </h4>
+                            <p className="text-ocean-600">ID #{selectedProduct.id}</p>
+                            <button
+                              onClick={handleDeleteProduct}
+                              className="mt-4 inline-flex items-center gap-2 px-4 py-2 text-red-600 border border-red-200 rounded-xl hover:bg-red-50 transition-colors"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                              <span>Eliminar producto</span>
+                            </button>
+                          </div>
+                        </div>
+
+                        <div
+                          onDragOver={(event) => {
+                            event.preventDefault();
+                            setIsDraggingImage(true);
+                          }}
+                          onDragLeave={() => setIsDraggingImage(false)}
+                          onDrop={(event) => {
+                            event.preventDefault();
+                            setIsDraggingImage(false);
+                            handleImageFile(event.dataTransfer.files?.[0]);
+                          }}
+                          className={`border-2 border-dashed rounded-2xl p-5 transition-colors ${
+                            isDraggingImage
+                              ? 'border-ocean-500 bg-ocean-50'
+                              : 'border-ocean-200 bg-white'
+                          }`}
                         >
-                          {availableProductImages.map((imageName) => (
-                            <option key={imageName} value={asset(imageName)}>
-                              {imageName}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                    </div>
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                            <div>
+                              <p className="font-medium text-ocean-900">
+                                Subir foto del producto
+                              </p>
+                              <p className="text-sm text-ocean-600">
+                                Arrastra una imagen aquí o súbela desde tu equipo.
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => imageInputRef.current?.click()}
+                              className="inline-flex items-center justify-center gap-2 px-4 py-3 bg-ocean-500 text-white rounded-xl font-medium hover:bg-ocean-600 transition-colors"
+                            >
+                              <Upload className="w-4 h-4" />
+                              <span>Subir imagen</span>
+                            </button>
+                          </div>
+                          <input
+                            ref={imageInputRef}
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(event) => handleImageFile(event.target.files?.[0])}
+                          />
+                        </div>
 
-                    <label className="flex items-center gap-3 p-4 border border-ocean-200 rounded-2xl">
-                      <input
-                        type="checkbox"
-                        checked={Boolean(selectedProduct.popular)}
-                        onChange={(event) =>
-                          handleFieldChange('popular', event.target.checked)
-                        }
-                      />
-                      <span className="text-ocean-800 font-medium">
-                        Mostrar como producto destacado
-                      </span>
-                    </label>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                          <label className="space-y-2">
+                            <span className="text-sm font-medium text-ocean-700">Nombre</span>
+                            <input
+                              value={selectedProduct.name}
+                              onChange={(event) =>
+                                handleFieldChange('name', event.target.value)
+                              }
+                              className="w-full px-4 py-3 border border-ocean-200 rounded-xl focus:outline-none focus:border-ocean-500"
+                            />
+                          </label>
+                          <label className="space-y-2">
+                            <span className="text-sm font-medium text-ocean-700">Precio</span>
+                            <input
+                              type="number"
+                              min="0"
+                              value={selectedProduct.price}
+                              onChange={(event) =>
+                                handleFieldChange(
+                                  'price',
+                                  Number(event.target.value) || 0
+                                )
+                              }
+                              className="w-full px-4 py-3 border border-ocean-200 rounded-xl focus:outline-none focus:border-ocean-500"
+                            />
+                          </label>
+                        </div>
 
-                    <div className="bg-ocean-50 rounded-2xl p-4 text-sm text-ocean-700">
-                      Los cambios se guardan automáticamente en este navegador. Si quieres volver
-                      al menú original, usa “Restaurar menú original”.
-                    </div>
-                  </div>
-                ) : (
-                  <div className="h-full flex items-center justify-center text-ocean-500">
-                    No hay productos para editar.
-                  </div>
-                )}
+                        <label className="space-y-2 block">
+                          <span className="text-sm font-medium text-ocean-700">Descripción</span>
+                          <textarea
+                            value={selectedProduct.description}
+                            onChange={(event) =>
+                              handleFieldChange('description', event.target.value)
+                            }
+                            rows={4}
+                            className="w-full px-4 py-3 border border-ocean-200 rounded-xl focus:outline-none focus:border-ocean-500"
+                          />
+                        </label>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                          <label className="space-y-2">
+                            <span className="text-sm font-medium text-ocean-700">Categoría</span>
+                            <select
+                              value={selectedProduct.category}
+                              onChange={(event) =>
+                                handleFieldChange('category', event.target.value)
+                              }
+                              className="w-full px-4 py-3 border border-ocean-200 rounded-xl focus:outline-none focus:border-ocean-500"
+                            >
+                              {menuCategories.map((category) => (
+                                <option key={category.id} value={category.id}>
+                                  {category.name}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+
+                          <label className="space-y-2">
+                            <span className="text-sm font-medium text-ocean-700">
+                              Imagen base
+                            </span>
+                            <select
+                              value={selectedProduct.image}
+                              onChange={(event) =>
+                                handleFieldChange('image', event.target.value)
+                              }
+                              className="w-full px-4 py-3 border border-ocean-200 rounded-xl focus:outline-none focus:border-ocean-500"
+                            >
+                              {availableProductImages.map((imageName) => (
+                                <option key={imageName} value={asset(imageName)}>
+                                  {imageName}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                        </div>
+
+                        <label className="flex items-center gap-3 p-4 border border-ocean-200 rounded-2xl">
+                          <input
+                            type="checkbox"
+                            checked={Boolean(selectedProduct.popular)}
+                            onChange={(event) =>
+                              handleFieldChange('popular', event.target.checked)
+                            }
+                          />
+                          <span className="text-ocean-800 font-medium">
+                            Mostrar como producto destacado
+                          </span>
+                        </label>
+
+                        <div className="bg-ocean-50 rounded-2xl p-4 text-sm text-ocean-700">
+                          Los cambios del menú se guardan automáticamente en este navegador.
+                        </div>
+
+                        <div className="bg-sand-100 rounded-2xl p-4 text-sm text-ocean-700">
+                          Usa “Respaldar menú” para guardar una copia del menú editado y
+                          “Importar respaldo” para restaurarlo después si cambias de navegador o
+                          borras caché.
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="h-full flex items-center justify-center text-ocean-500">
+                        No hay productos para editar.
+                      </div>
+                    )}
+                  </section>
+                </div>
               </div>
             </div>
           )}
