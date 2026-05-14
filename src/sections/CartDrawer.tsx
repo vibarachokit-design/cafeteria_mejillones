@@ -145,7 +145,7 @@ const CartDrawer = () => {
               id="table-select"
               value={selectedTable}
               onChange={(event) => setSelectedTable(event.target.value)}
-              disabled={items.length > 0}
+              disabled={items.length > 0 && Boolean(selectedTable)}
               className="w-full px-4 py-3 bg-white border-2 border-ocean-200 text-ocean-900 rounded-xl font-medium focus:outline-none focus:border-ocean-500 transition-colors disabled:bg-ocean-50 disabled:text-ocean-400"
             >
               <option value="">Elige una mesa</option>
@@ -155,7 +155,7 @@ const CartDrawer = () => {
                 </option>
               ))}
             </select>
-            {items.length > 0 && (
+            {items.length > 0 && selectedTable && (
               <p className="text-xs text-ocean-500">
                 Para evitar mezclar pedidos, la mesa se puede cambiar cuando el pedido nuevo esté vacío.
               </p>

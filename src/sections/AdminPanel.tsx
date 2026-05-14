@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { Settings2, X, Plus, Trash2, RotateCcw } from 'lucide-react';
+import { useMemo, useRef, useState } from 'react';
+import { Settings2, X, Plus, Trash2, RotateCcw, Upload } from 'lucide-react';
 import { useMenu } from '@/context/MenuContext';
 import {
   availableProductImages,
@@ -17,6 +17,8 @@ const AdminPanel = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState<number>(products[0]?.id ?? 0);
   const [pinInput, setPinInput] = useState('');
+  const [isDraggingImage, setIsDraggingImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUnlocked, setIsUnlocked] = useState(() => {
     if (typeof window === 'undefined') return false;
     return window.localStorage.getItem(ADMIN_SESSION_KEY) === 'ok';
@@ -75,6 +77,27 @@ const AdminPanel = () => {
     setIsOpen(false);
     setPinInput('');
     toast.success('Panel administrador bloqueado');
+  };
+
+  const handleImageFile = (file?: File) => {
+    if (!file || !selectedProduct) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Selecciona un archivo de imagen válido');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result !== 'string') {
+        toast.error('No se pudo leer la imagen');
+        return;
+      }
+
+      handleFieldChange('image', reader.result);
+      toast.success('Imagen actualizada');
+    };
+    reader.readAsDataURL(file);
   };
 
   return (
@@ -207,7 +230,7 @@ const AdminPanel = () => {
                         alt={selectedProduct.name}
                         className="w-full sm:w-56 h-56 object-cover rounded-3xl shadow-ocean"
                       />
-                      <div className="flex-1 space-y-2">
+                    <div className="flex-1 space-y-2">
                         <h3 className="font-display text-3xl font-semibold text-ocean-900">
                           {selectedProduct.name}
                         </h3>
@@ -221,10 +244,54 @@ const AdminPanel = () => {
                           <Trash2 className="w-4 h-4" />
                           <span>Eliminar producto</span>
                         </button>
-                      </div>
                     </div>
+                  </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div
+                    onDragOver={(event) => {
+                      event.preventDefault();
+                      setIsDraggingImage(true);
+                    }}
+                    onDragLeave={() => setIsDraggingImage(false)}
+                    onDrop={(event) => {
+                      event.preventDefault();
+                      setIsDraggingImage(false);
+                      handleImageFile(event.dataTransfer.files?.[0]);
+                    }}
+                    className={`border-2 border-dashed rounded-2xl p-5 transition-colors ${
+                      isDraggingImage
+                        ? 'border-ocean-500 bg-ocean-50'
+                        : 'border-ocean-200 bg-white'
+                    }`}
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                      <div>
+                        <p className="font-medium text-ocean-900">
+                          Subir foto del producto
+                        </p>
+                        <p className="text-sm text-ocean-600">
+                          Arrastra una imagen aquí o súbela desde tu equipo.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="inline-flex items-center justify-center gap-2 px-4 py-3 bg-ocean-500 text-white rounded-xl font-medium hover:bg-ocean-600 transition-colors"
+                      >
+                        <Upload className="w-4 h-4" />
+                        <span>Subir imagen</span>
+                      </button>
+                    </div>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(event) => handleImageFile(event.target.files?.[0])}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                       <label className="space-y-2">
                         <span className="text-sm font-medium text-ocean-700">Nombre</span>
                         <input
