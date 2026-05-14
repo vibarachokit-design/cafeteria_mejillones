@@ -14,6 +14,14 @@ interface OpenTable {
   lastSentAt: string | null;
 }
 
+export interface SaleRecord {
+  id: string;
+  tableId: string;
+  closedAt: string;
+  total: number;
+  items: CartItem[];
+}
+
 interface CartContextType {
   items: CartItem[];
   addItem: (item: Omit<CartItem, 'quantity'>) => void;
@@ -31,6 +39,7 @@ interface CartContextType {
   closeTable: () => { tableId: string; items: CartItem[] } | null;
   currentTableItems: CartItem[];
   currentTableTotal: number;
+  salesHistory: SaleRecord[];
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -38,6 +47,7 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 const ITEMS_KEY = 'espacio-kihnally-cart-items';
 const TABLE_KEY = 'espacio-kihnally-selected-table';
 const OPEN_TABLES_KEY = 'espacio-kihnally-open-tables';
+const SALES_HISTORY_KEY = 'espacio-kihnally-sales-history';
 
 const mergeItems = (items: CartItem[]) => {
   const merged = new Map<number, CartItem>();
@@ -80,6 +90,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [openTables, setOpenTables] = useState<Record<string, OpenTable>>(() =>
     readStorage(OPEN_TABLES_KEY, {})
   );
+  const [salesHistory, setSalesHistory] = useState<SaleRecord[]>(() =>
+    readStorage(SALES_HISTORY_KEY, [])
+  );
 
   const persistItems = (nextItems: CartItem[]) => {
     setItems(nextItems);
@@ -94,6 +107,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const setSelectedTable = (tableId: string) => {
     setSelectedTableState(tableId);
     window.localStorage.setItem(TABLE_KEY, JSON.stringify(tableId));
+  };
+
+  const persistSalesHistory = (nextSalesHistory: SaleRecord[]) => {
+    setSalesHistory(nextSalesHistory);
+    window.localStorage.setItem(
+      SALES_HISTORY_KEY,
+      JSON.stringify(nextSalesHistory)
+    );
   };
 
   const addItem = (newItem: Omit<CartItem, 'quantity'>) => {
@@ -158,6 +179,21 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     persistTables(nextTables);
     persistItems([]);
     const tableId = selectedTable;
+    const closedAt = new Date().toISOString();
+    const total = allItems.reduce(
+      (sum, item) => sum + item.price * item.quantity,
+      0
+    );
+    persistSalesHistory([
+      {
+        id: `${tableId}-${closedAt}`,
+        tableId,
+        closedAt,
+        total,
+        items: allItems,
+      },
+      ...salesHistory,
+    ]);
     setSelectedTable('');
 
     return {
@@ -196,8 +232,19 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       closeTable,
       currentTableItems,
       currentTableTotal,
+      salesHistory,
     }),
-    [items, totalItems, totalPrice, isCartOpen, selectedTable, openTables, currentTableItems, currentTableTotal]
+    [
+      items,
+      totalItems,
+      totalPrice,
+      isCartOpen,
+      selectedTable,
+      openTables,
+      currentTableItems,
+      currentTableTotal,
+      salesHistory,
+    ]
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
