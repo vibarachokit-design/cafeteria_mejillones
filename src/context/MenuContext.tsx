@@ -7,6 +7,7 @@ interface MenuContextType {
   addProduct: () => number;
   removeProduct: (id: number) => void;
   resetProducts: () => void;
+  importProducts: (nextProducts: MenuProduct[]) => void;
 }
 
 const MenuContext = createContext<MenuContextType | undefined>(undefined);
@@ -62,6 +63,10 @@ export function MenuProvider({ children }: { children: React.ReactNode }) {
     persist(defaultMenuProducts);
   };
 
+  const importProducts = (nextProducts: MenuProduct[]) => {
+    persist(nextProducts);
+  };
+
   const value = useMemo(
     () => ({
       products,
@@ -69,6 +74,7 @@ export function MenuProvider({ children }: { children: React.ReactNode }) {
       addProduct,
       removeProduct,
       resetProducts,
+      importProducts,
     }),
     [products]
   );
