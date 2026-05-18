@@ -133,6 +133,21 @@ const CartDrawer = () => {
           </button>
         </div>
 
+        <div className="md:hidden px-6 pt-4">
+          <div className="bg-ocean-900 text-white rounded-2xl px-4 py-3 flex items-center justify-between">
+            <div>
+              <p className="text-xs uppercase tracking-wide text-white/60">Mesa activa</p>
+              <p className="font-semibold">
+                {selectedTable ? `Mesa ${selectedTable}` : 'Selecciona una mesa'}
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-white/60">Productos nuevos</p>
+              <p className="font-semibold">{totalItems}</p>
+            </div>
+          </div>
+        </div>
+
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           <div className="space-y-2">
             <label
@@ -276,7 +291,7 @@ const CartDrawer = () => {
           )}
         </div>
 
-        <div className="border-t border-ocean-100 p-6 space-y-4">
+        <div className="border-t border-ocean-100 p-5 md:p-6 space-y-4 bg-white">
           <div className="flex items-center justify-between">
             <span className="text-ocean-600">Pedido nuevo</span>
             <span className="font-medium text-ocean-900">
@@ -301,14 +316,14 @@ const CartDrawer = () => {
           <div className="space-y-3">
             <button
               onClick={handleSendCurrentOrder}
-              className="w-full py-4 bg-green-500 text-white rounded-xl font-medium flex items-center justify-center gap-2 hover:bg-green-600 transition-colors"
+              className="w-full py-4 bg-green-500 text-white rounded-xl font-medium flex items-center justify-center gap-2 hover:bg-green-600 transition-colors text-sm md:text-base"
             >
               <Send className="w-5 h-5" />
               <span>Enviar pedido y dejar mesa abierta</span>
             </button>
             <button
               onClick={handleCloseTable}
-              className="w-full py-4 bg-ocean-900 text-white rounded-xl font-medium flex items-center justify-center gap-2 hover:bg-ocean-800 transition-colors"
+              className="w-full py-4 bg-ocean-900 text-white rounded-xl font-medium flex items-center justify-center gap-2 hover:bg-ocean-800 transition-colors text-sm md:text-base"
             >
               <Receipt className="w-5 h-5" />
               <span>Cerrar mesa y enviar cuenta final</span>
