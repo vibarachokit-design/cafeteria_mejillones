@@ -77,7 +77,7 @@ const Gallery = () => {
   };
 
   return (
-    <section id="galeria" className="py-20 bg-ocean-50/50">
+    <section id="galeria" className="hidden md:block py-20 bg-ocean-50/50">
       <div className="section-padding max-w-7xl mx-auto">
         <div className="text-center mb-12">
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-ocean-100 rounded-full mb-4">

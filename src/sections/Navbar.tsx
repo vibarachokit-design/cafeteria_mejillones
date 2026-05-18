@@ -1,5 +1,5 @@
 ﻿import { useState, useEffect } from 'react';
-import { Menu, X, ShoppingCart } from 'lucide-react';
+import { Menu, X, ShoppingCart, ClipboardList } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 
 const asset = (path: string) => `${import.meta.env.BASE_URL}${path.replace(/^\//, '')}`;
@@ -7,7 +7,7 @@ const asset = (path: string) => `${import.meta.env.BASE_URL}${path.replace(/^\//
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { totalItems, setIsCartOpen } = useCart();
+  const { totalItems, setIsCartOpen, selectedTable } = useCart();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -24,6 +24,7 @@ const Navbar = () => {
     { name: 'Galería', href: '#galeria' },
     { name: 'Contacto', href: '#contacto' },
   ];
+  const mobileNavLinks = navLinks.slice(0, 2);
 
   return (
     <nav
@@ -48,7 +49,7 @@ const Navbar = () => {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-8">
-            {navLinks.map((link) => (
+            {mobileNavLinks.map((link) => (
               <a
                 key={link.name}
                 href={link.href}
@@ -64,18 +65,31 @@ const Navbar = () => {
           </div>
 
           {/* Right Side - Cart & Mobile Menu */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            {selectedTable && (
+              <div
+                className={`hidden sm:flex items-center gap-2 px-3 py-2 rounded-full text-sm font-medium ${
+                  isScrolled
+                    ? 'bg-sand-100 text-ocean-800'
+                    : 'bg-white/15 text-white border border-white/25'
+                }`}
+              >
+                <ClipboardList className="w-4 h-4" />
+                <span>Mesa {selectedTable}</span>
+              </div>
+            )}
+
             {/* Cart Button */}
             <button
               onClick={() => setIsCartOpen(true)}
-              className={`relative flex items-center gap-2 px-4 py-2 rounded-full font-medium transition-all duration-300 hover:scale-105 ${
+              className={`relative flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-full font-medium transition-all duration-300 hover:scale-105 ${
                 isScrolled
                   ? 'bg-ocean-500 text-white shadow-ocean hover:shadow-ocean-lg'
                   : 'bg-white/20 backdrop-blur-sm text-white border border-white/30 hover:bg-white/30'
               }`}
             >
               <ShoppingCart className="w-5 h-5" />
-              <span className="hidden sm:inline">Pedido</span>
+              <span className="text-sm sm:text-base">{selectedTable ? `Mesa ${selectedTable}` : 'Pedido'}</span>
               {totalItems > 0 && (
                 <span className="absolute -top-2 -right-2 w-6 h-6 bg-coral-500 text-white text-xs font-bold rounded-full flex items-center justify-center animate-bounce">
                   {totalItems}
@@ -120,7 +134,7 @@ const Navbar = () => {
               className="flex items-center justify-center gap-2 mt-3 w-full py-3 px-4 bg-ocean-500 text-white rounded-lg font-medium hover:bg-ocean-600 transition-colors duration-300"
             >
               <ShoppingCart className="w-4 h-4" />
-              <span>Ver Pedido</span>
+              <span>{selectedTable ? `Ver Mesa ${selectedTable}` : 'Ver Pedido'}</span>
               {totalItems > 0 && (
                 <span className="ml-2 px-2 py-0.5 bg-white text-ocean-500 text-xs font-bold rounded-full">
                   {totalItems}
@@ -129,6 +143,30 @@ const Navbar = () => {
             </button>
           </div>
         </div>
+      </div>
+
+      <div className="md:hidden fixed bottom-4 left-4 right-4 z-50">
+        <button
+          onClick={() => setIsCartOpen(true)}
+          className="w-full bg-ocean-900 text-white rounded-2xl px-4 py-4 shadow-2xl flex items-center justify-between"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-full bg-white/15 flex items-center justify-center">
+              <ShoppingCart className="w-5 h-5" />
+            </div>
+            <div className="text-left">
+              <p className="text-sm text-white/70">
+                {selectedTable ? `Mesa ${selectedTable}` : 'Pedido actual'}
+              </p>
+              <p className="font-semibold">
+                {totalItems > 0 ? `${totalItems} producto${totalItems === 1 ? '' : 's'}` : 'Abrir carrito'}
+              </p>
+            </div>
+          </div>
+          <span className="text-sm font-medium bg-white text-ocean-900 px-3 py-1 rounded-full">
+            Ver
+          </span>
+        </button>
       </div>
     </nav>
   );
