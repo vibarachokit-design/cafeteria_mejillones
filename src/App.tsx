@@ -17,6 +17,19 @@ function App() {
     document.title = 'Espacio Kihnally - Donde el Norte se siente';
   }, []);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (window.innerWidth >= 768) return;
+    if (window.location.hash) return;
+
+    const timeoutId = window.setTimeout(() => {
+      const menuSection = document.getElementById('menu');
+      menuSection?.scrollIntoView({ block: 'start' });
+    }, 150);
+
+    return () => window.clearTimeout(timeoutId);
+  }, []);
+
   return (
     <MenuProvider>
       <CartProvider>
