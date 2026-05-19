@@ -1,4 +1,5 @@
-import { useCart } from '@/context/CartContext';
+import { useMemo, useState } from 'react';
+import { useCart, type CartItem, type PaymentMethod } from '@/context/CartContext';
 import {
   X,
   Plus,
@@ -7,8 +8,44 @@ import {
   Send,
   Trash2,
   Receipt,
+  CreditCard,
+  Landmark,
+  Wallet,
+  ArrowRightLeft,
 } from 'lucide-react';
 import { toast } from 'sonner';
+
+const paymentOptions: Array<{
+  id: PaymentMethod;
+  label: string;
+  description: string;
+  icon: typeof CreditCard;
+}> = [
+  {
+    id: 'debito',
+    label: 'Débito',
+    description: 'Pago con tarjeta de débito',
+    icon: Landmark,
+  },
+  {
+    id: 'credito',
+    label: 'Crédito',
+    description: 'Pago con tarjeta de crédito',
+    icon: CreditCard,
+  },
+  {
+    id: 'efectivo',
+    label: 'Efectivo',
+    description: 'Pago en efectivo',
+    icon: Wallet,
+  },
+  {
+    id: 'transferencia',
+    label: 'Transferencia',
+    description: 'Pago por transferencia bancaria',
+    icon: ArrowRightLeft,
+  },
+];
 
 const CartDrawer = () => {
   const {
@@ -28,6 +65,13 @@ const CartDrawer = () => {
     currentTableItems,
     currentTableTotal,
   } = useCart();
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] =
+    useState<PaymentMethod>('debito');
+  const [closeStep, setCloseStep] = useState<'payment' | 'tip'>('payment');
+  const [includeTip, setIncludeTip] = useState(false);
+
+  const activeOpenTable = selectedTable ? openTables[selectedTable] : undefined;
 
   const formatPrice = (price: number) =>
     new Intl.NumberFormat('es-CL', {
@@ -36,9 +80,39 @@ const CartDrawer = () => {
       minimumFractionDigits: 0,
     }).format(price);
 
-  const buildMessage = (tableId: string, tableItems: typeof currentTableItems, title: string) => {
+  const formatDateTime = (value: string) =>
+    new Date(value).toLocaleString('es-CL', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+  const formatElapsedMinutes = (minutes: number) => {
+    const safeMinutes = Math.max(0, minutes);
+    const hours = Math.floor(safeMinutes / 60);
+    const remainingMinutes = safeMinutes % 60;
+
+    if (hours === 0) return `${remainingMinutes} min`;
+    return `${hours} h ${remainingMinutes} min`;
+  };
+
+  const paymentMethodLabel = (paymentMethod: PaymentMethod) =>
+    paymentOptions.find((option) => option.id === paymentMethod)?.label ?? paymentMethod;
+
+  const suggestedTip = Math.round(currentTableTotal * 0.1);
+  const totalWithTip = currentTableTotal + suggestedTip;
+
+  const buildOrderMessage = (
+    tableId: string,
+    tableItems: CartItem[],
+    sentAt: string,
+    title: string
+  ) => {
     let message = `📋 *${title}*\n\n`;
-    message += `🪑 *Mesa:* ${tableId}\n\n`;
+    message += `🪑 *Mesa:* ${tableId}\n`;
+    message += `📅 *Fecha:* ${formatDateTime(sentAt)}\n\n`;
     message += '*Productos:*\n';
 
     tableItems.forEach((item, index) => {
@@ -51,7 +125,49 @@ const CartDrawer = () => {
       (sum, item) => sum + item.price * item.quantity,
       0
     );
-    message += `\n*Total:* ${formatPrice(total)}\n\n`;
+    message += `\n*Total pedido:* ${formatPrice(total)}\n\n`;
+    message += 'Gracias 😊';
+    return message;
+  };
+
+  const buildFinalMessage = ({
+    tableId,
+    tableItems,
+    openedAt,
+    closedAt,
+    total,
+    subtotal,
+    tipAmount,
+    paymentMethod,
+    elapsedMinutes,
+  }: {
+    tableId: string;
+    tableItems: CartItem[];
+    openedAt: string;
+    closedAt: string;
+    subtotal: number;
+    tipAmount: number;
+    total: number;
+    paymentMethod: PaymentMethod;
+    elapsedMinutes: number;
+  }) => {
+    let message = '🧾 *Cuenta Final Espacio Kihnally*\n\n';
+    message += `🪑 *Mesa:* ${tableId}\n`;
+    message += `📅 *Apertura:* ${formatDateTime(openedAt)}\n`;
+    message += `✅ *Cierre:* ${formatDateTime(closedAt)}\n`;
+    message += `⏱️ *Tiempo de atención:* ${formatElapsedMinutes(elapsedMinutes)}\n`;
+    message += `💳 *Medio de pago:* ${paymentMethodLabel(paymentMethod)}\n\n`;
+    message += '*Consumo:*\n';
+
+    tableItems.forEach((item, index) => {
+      message += `${index + 1}. ${item.name} x${item.quantity} - ${formatPrice(
+        item.price * item.quantity
+      )}\n`;
+    });
+
+    message += `\n*Subtotal consumo:* ${formatPrice(subtotal)}\n`;
+    message += `*Propina:* ${tipAmount > 0 ? formatPrice(tipAmount) : 'No incluida'}\n`;
+    message += `*Total final:* ${formatPrice(total)}\n\n`;
     message += 'Gracias 😊';
     return message;
   };
@@ -73,35 +189,66 @@ const CartDrawer = () => {
       return;
     }
 
+    const sentAt = new Date().toISOString();
     openWhatsApp(
-      buildMessage(selectedTable, items, 'Pedido Espacio Kihnally')
+      buildOrderMessage(selectedTable, items, sentAt, 'Pedido Espacio Kihnally')
     );
     submitCurrentOrder();
     toast.success('Pedido enviado. La mesa quedó abierta para seguir agregando productos.');
   };
 
-  const handleCloseTable = () => {
+  const handleStartCloseTable = () => {
     if (!selectedTable) {
       toast.error('Selecciona una mesa para cerrar la cuenta');
       return;
     }
 
-    const result = closeTable();
-    if (!result) {
+    if (currentTableItems.length === 0) {
       toast.error('No hay productos acumulados para cerrar esta mesa');
       return;
     }
 
+    setSelectedPaymentMethod('debito');
+    setIncludeTip(false);
+    setCloseStep('payment');
+    setIsPaymentModalOpen(true);
+  };
+
+  const handleConfirmCloseTable = () => {
+    const result = closeTable(selectedPaymentMethod, includeTip);
+    if (!result) {
+      toast.error('No se pudo cerrar la mesa');
+      return;
+    }
+
     openWhatsApp(
-      buildMessage(result.tableId, result.items, 'Cuenta Final Espacio Kihnally')
+      buildFinalMessage({
+        tableId: result.tableId,
+        tableItems: result.items,
+        openedAt: result.openedAt,
+        closedAt: result.closedAt,
+        subtotal: result.subtotal,
+        tipAmount: result.tipAmount,
+        total: result.total,
+        paymentMethod: result.paymentMethod,
+        elapsedMinutes: result.elapsedMinutes,
+      })
     );
+
+    setIsPaymentModalOpen(false);
+    setCloseStep('payment');
+    setIncludeTip(false);
     toast.success('Cuenta final enviada y mesa cerrada.');
   };
 
-  if (!isCartOpen) return null;
-
   const hasOpenTable = selectedTable && openTables[selectedTable];
   const hasAccumulatedItems = currentTableItems.length > items.length;
+  const openedAtLabel = useMemo(() => {
+    if (!activeOpenTable?.openedAt) return null;
+    return formatDateTime(activeOpenTable.openedAt);
+  }, [activeOpenTable]);
+
+  if (!isCartOpen) return null;
 
   return (
     <>
@@ -209,6 +356,12 @@ const CartDrawer = () => {
               <p className="text-sm font-semibold text-ocean-900">
                 Mesa {selectedTable} sigue abierta
               </p>
+              {openedAtLabel && (
+                <div className="flex items-center justify-between text-sm text-ocean-700">
+                  <span>Apertura mesa</span>
+                  <span>{openedAtLabel}</span>
+                </div>
+              )}
               <div className="flex items-center justify-between text-sm text-ocean-700">
                 <span>Acumulado mesa</span>
                 <span>{formatPrice(currentTableTotal)}</span>
@@ -322,7 +475,7 @@ const CartDrawer = () => {
               <span>Enviar pedido y dejar mesa abierta</span>
             </button>
             <button
-              onClick={handleCloseTable}
+              onClick={handleStartCloseTable}
               className="w-full py-4 bg-ocean-900 text-white rounded-xl font-medium flex items-center justify-center gap-2 hover:bg-ocean-800 transition-colors text-sm md:text-base"
             >
               <Receipt className="w-5 h-5" />
@@ -337,6 +490,162 @@ const CartDrawer = () => {
           </div>
         </div>
       </div>
+
+      {isPaymentModalOpen && closeStep === 'payment' && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60]"
+            onClick={() => setIsPaymentModalOpen(false)}
+          />
+          <div className="fixed inset-x-4 top-1/2 z-[61] mx-auto w-auto max-w-md -translate-y-1/2 rounded-3xl bg-white p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="font-display text-2xl font-semibold text-ocean-900">
+                  Cerrar mesa
+                </h3>
+                <p className="mt-2 text-sm text-ocean-600">
+                  Elige el medio de pago antes de enviar la cuenta final por WhatsApp.
+                </p>
+              </div>
+              <button
+                onClick={() => setIsPaymentModalOpen(false)}
+                className="rounded-lg p-2 hover:bg-ocean-50 transition-colors"
+              >
+                <X className="w-5 h-5 text-ocean-600" />
+              </button>
+            </div>
+
+            <div className="mt-6 space-y-3">
+              {paymentOptions.map((option) => {
+                const Icon = option.icon;
+
+                return (
+                  <button
+                    key={option.id}
+                    onClick={() => setSelectedPaymentMethod(option.id)}
+                    className={`w-full rounded-2xl border p-4 text-left transition-colors ${
+                      selectedPaymentMethod === option.id
+                        ? 'border-ocean-500 bg-ocean-50'
+                        : 'border-ocean-200 hover:bg-ocean-50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="rounded-xl bg-white p-2 shadow-sm">
+                        <Icon className="w-5 h-5 text-ocean-700" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-ocean-900">{option.label}</p>
+                        <p className="text-sm text-ocean-600">{option.description}</p>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="mt-6 rounded-2xl bg-sand-100 p-4 text-sm text-ocean-700">
+              La cuenta incluirá fecha, hora, medio de pago y tiempo total desde la apertura de la mesa.
+            </div>
+
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+              <button
+                onClick={() => setIsPaymentModalOpen(false)}
+                className="flex-1 rounded-xl border border-ocean-200 px-4 py-3 font-medium text-ocean-700 hover:bg-ocean-50 transition-colors"
+              >
+                Volver
+              </button>
+              <button
+                onClick={() => setCloseStep('tip')}
+                className="flex-1 rounded-xl bg-ocean-900 px-4 py-3 font-medium text-white hover:bg-ocean-800 transition-colors"
+              >
+                Continuar
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {isPaymentModalOpen && closeStep === 'tip' && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[62]"
+            onClick={() => {
+              setIsPaymentModalOpen(false);
+              setCloseStep('payment');
+            }}
+          />
+          <div className="fixed inset-x-4 top-1/2 z-[63] mx-auto w-auto max-w-md -translate-y-1/2 rounded-3xl bg-white p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="font-display text-2xl font-semibold text-ocean-900">
+                  Propina sugerida
+                </h3>
+                <p className="mt-2 text-sm text-ocean-600">
+                  ¿Desea agregar propina? En Chile la sugerida es el 10% del consumo.
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setIsPaymentModalOpen(false);
+                  setCloseStep('payment');
+                }}
+                className="rounded-lg p-2 hover:bg-ocean-50 transition-colors"
+              >
+                <X className="w-5 h-5 text-ocean-600" />
+              </button>
+            </div>
+
+            <div className="mt-6 space-y-3">
+              <button
+                onClick={() => setIncludeTip(false)}
+                className={`w-full rounded-2xl border p-4 text-left transition-colors ${
+                  !includeTip
+                    ? 'border-ocean-500 bg-ocean-50'
+                    : 'border-ocean-200 hover:bg-ocean-50'
+                }`}
+              >
+                <p className="font-semibold text-ocean-900">Sin propina</p>
+                <p className="text-sm text-ocean-600">
+                  Total a cobrar: {formatPrice(currentTableTotal)}
+                </p>
+              </button>
+
+              <button
+                onClick={() => setIncludeTip(true)}
+                className={`w-full rounded-2xl border p-4 text-left transition-colors ${
+                  includeTip
+                    ? 'border-ocean-500 bg-ocean-50'
+                    : 'border-ocean-200 hover:bg-ocean-50'
+                }`}
+              >
+                <p className="font-semibold text-ocean-900">Agregar propina sugerida</p>
+                <p className="text-sm text-ocean-600">
+                  10%: {formatPrice(suggestedTip)} | Total a cobrar: {formatPrice(totalWithTip)}
+                </p>
+              </button>
+            </div>
+
+            <div className="mt-6 rounded-2xl bg-sand-100 p-4 text-sm text-ocean-700">
+              Medio de pago seleccionado: {paymentMethodLabel(selectedPaymentMethod)}
+            </div>
+
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+              <button
+                onClick={() => setCloseStep('payment')}
+                className="flex-1 rounded-xl border border-ocean-200 px-4 py-3 font-medium text-ocean-700 hover:bg-ocean-50 transition-colors"
+              >
+                Cambiar medio de pago
+              </button>
+              <button
+                onClick={handleConfirmCloseTable}
+                className="flex-1 rounded-xl bg-ocean-900 px-4 py-3 font-medium text-white hover:bg-ocean-800 transition-colors"
+              >
+                Enviar cuenta final
+              </button>
+            </div>
+          </div>
+        </>
+      )}
     </>
   );
 };

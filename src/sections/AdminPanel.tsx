@@ -9,6 +9,9 @@ import {
   Download,
   FileUp,
   ChartNoAxesCombined,
+  RefreshCw,
+  Cloud,
+  CloudOff,
 } from 'lucide-react';
 import { useMenu } from '@/context/MenuContext';
 import { useCart } from '@/context/CartContext';
@@ -22,6 +25,12 @@ import { toast } from 'sonner';
 
 const ADMIN_SESSION_KEY = 'espacio-kihnally-admin-session';
 const ADMIN_PIN = import.meta.env.VITE_ADMIN_PIN ?? 'kihnally2026';
+const paymentMethodLabel = {
+  debito: 'Debito',
+  credito: 'Credito',
+  efectivo: 'Efectivo',
+  transferencia: 'Transferencia',
+} as const;
 
 const AdminPanel = () => {
   const {
@@ -31,6 +40,11 @@ const AdminPanel = () => {
     removeProduct,
     resetProducts,
     importProducts,
+    syncEnabled,
+    syncStatus,
+    syncError,
+    lastSyncedAt,
+    syncNow,
   } = useMenu();
   const { salesHistory } = useCart();
 
@@ -54,7 +68,14 @@ const AdminPanel = () => {
     [products, selectedProductId]
   );
 
-  const todayKey = new Date().toLocaleDateString('sv-SE');
+  const now = new Date();
+  const todayKey = now.toLocaleDateString('sv-SE');
+  const weekStart = new Date(now);
+  const dayOfWeek = weekStart.getDay();
+  const weekOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  weekStart.setDate(weekStart.getDate() + weekOffset);
+  weekStart.setHours(0, 0, 0, 0);
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const todaysSales = useMemo(
     () => salesHistory.filter((sale) => sale.closedAt.slice(0, 10) === todayKey),
     [salesHistory, todayKey]
@@ -63,6 +84,7 @@ const AdminPanel = () => {
   const todaySummary = useMemo(() => {
     const totalSales = todaysSales.length;
     const totalRevenue = todaysSales.reduce((sum, sale) => sum + sale.total, 0);
+    const totalTips = todaysSales.reduce((sum, sale) => sum + sale.tipAmount, 0);
     const totalProducts = todaysSales.reduce(
       (sum, sale) =>
         sum + sale.items.reduce((itemsSum, item) => itemsSum + item.quantity, 0),
@@ -92,6 +114,7 @@ const AdminPanel = () => {
     return {
       totalSales,
       totalRevenue,
+      totalTips,
       totalProducts,
       topProducts,
     };
@@ -103,6 +126,40 @@ const AdminPanel = () => {
       currency: 'CLP',
       minimumFractionDigits: 0,
     }).format(price);
+
+  const formatDateTime = (value: string) =>
+    new Date(value).toLocaleString('es-CL', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+  const formatElapsedMinutes = (minutes: number) => {
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    if (hours === 0) return `${remainingMinutes} min`;
+    return `${hours} h ${remainingMinutes} min`;
+  };
+
+  const syncStatusLabel = {
+    disabled: 'Sincronización desactivada',
+    loading: 'Cargando menú compartido',
+    saving: 'Guardando cambios en Supabase',
+    synced: 'Menú sincronizado',
+    error: 'Error de sincronización',
+  }[syncStatus];
+
+  const lastSyncLabel = lastSyncedAt
+    ? new Date(lastSyncedAt).toLocaleString('es-CL', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    : 'Aún no hay una sincronización registrada';
 
   const handleFieldChange = <K extends keyof MenuProduct>(
     key: K,
@@ -173,39 +230,68 @@ const AdminPanel = () => {
     reader.readAsDataURL(file);
   };
 
-  const handleExportDailySales = () => {
-    if (todaysSales.length === 0) {
-      toast.error('No hay ventas cerradas hoy para exportar');
+  const handleExportSales = (period: 'daily' | 'weekly' | 'monthly') => {
+    const filteredSales = salesHistory.filter((sale) => {
+      const closedAtDate = new Date(sale.closedAt);
+
+      if (period === 'daily') {
+        return sale.closedAt.slice(0, 10) === todayKey;
+      }
+
+      if (period === 'weekly') {
+        return closedAtDate >= weekStart;
+      }
+
+      return closedAtDate >= monthStart;
+    });
+
+    if (filteredSales.length === 0) {
+      const periodLabel =
+        period === 'daily' ? 'hoy' : period === 'weekly' ? 'esta semana' : 'este mes';
+      toast.error(`No hay ventas cerradas en ${periodLabel} para exportar`);
       return;
     }
 
     const rows = [
       [
         'Fecha',
-        'Hora',
+        'Hora Apertura',
+        'Hora Cierre',
         'Mesa',
+        'Medio de Pago',
+        'Tiempo Atencion (min)',
+        'Subtotal Consumo',
+        'Propina',
+        'Total Final',
         'Producto',
         'Cantidad',
         'Precio Unitario',
         'Subtotal',
-        'Total Mesa',
       ],
     ];
 
-    todaysSales.forEach((sale) => {
-      sale.items.forEach((item, index) => {
+    filteredSales.forEach((sale) => {
+      sale.items.forEach((item) => {
         rows.push([
           sale.closedAt.slice(0, 10),
+          new Date(sale.openedAt).toLocaleTimeString('es-CL', {
+            hour: '2-digit',
+            minute: '2-digit',
+          }),
           new Date(sale.closedAt).toLocaleTimeString('es-CL', {
             hour: '2-digit',
             minute: '2-digit',
           }),
           sale.tableId,
+          paymentMethodLabel[sale.paymentMethod],
+          String(sale.elapsedMinutes),
+          String(sale.subtotal),
+          String(sale.tipAmount),
+          String(sale.total),
           item.name,
           String(item.quantity),
           String(item.price),
           String(item.price * item.quantity),
-          index === 0 ? String(sale.total) : '',
         ]);
       });
     });
@@ -220,10 +306,12 @@ const AdminPanel = () => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `ventas-${todayKey}.csv`;
+    link.download = `ventas-${period}-${todayKey}.csv`;
     link.click();
     URL.revokeObjectURL(url);
-    toast.success('Archivo de ventas diarias exportado');
+    const successLabel =
+      period === 'daily' ? 'diarias' : period === 'weekly' ? 'semanales' : 'mensuales';
+    toast.success(`Archivo de ventas ${successLabel} exportado`);
   };
 
   const handleBackupExport = () => {
@@ -340,6 +428,34 @@ const AdminPanel = () => {
                 </div>
 
                 <div className="space-y-3 mb-6">
+                  <div className="border border-ocean-200 rounded-2xl p-4 bg-ocean-50">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="space-y-1">
+                        <p className="text-sm font-semibold text-ocean-900">
+                          Menú compartido con la garzona
+                        </p>
+                        <p className="text-sm text-ocean-600">{syncStatusLabel}</p>
+                        <p className="text-xs text-ocean-500">{lastSyncLabel}</p>
+                        {syncError && (
+                          <p className="text-xs text-red-600">{syncError}</p>
+                        )}
+                      </div>
+                      {syncEnabled ? (
+                        <Cloud className="w-5 h-5 text-ocean-600 shrink-0" />
+                      ) : (
+                        <CloudOff className="w-5 h-5 text-ocean-400 shrink-0" />
+                      )}
+                    </div>
+                    <button
+                      onClick={() => void syncNow()}
+                      disabled={!syncEnabled || syncStatus === 'loading'}
+                      className="mt-4 w-full py-3 border border-ocean-200 text-ocean-700 rounded-xl font-medium flex items-center justify-center gap-2 hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                      <span>Sincronizar ahora</span>
+                    </button>
+                  </div>
+
                   <button
                     onClick={handleCreateProduct}
                     className="w-full py-3 bg-ocean-500 text-white rounded-xl font-medium flex items-center justify-center gap-2 hover:bg-ocean-600 transition-colors"
@@ -355,11 +471,25 @@ const AdminPanel = () => {
                     <span>Restaurar menú original</span>
                   </button>
                   <button
-                    onClick={handleExportDailySales}
+                    onClick={() => handleExportSales('daily')}
                     className="w-full py-3 border border-ocean-200 text-ocean-700 rounded-xl font-medium flex items-center justify-center gap-2 hover:bg-ocean-50 transition-colors"
                   >
                     <ChartNoAxesCombined className="w-4 h-4" />
                     <span>Exportar ventas diarias</span>
+                  </button>
+                  <button
+                    onClick={() => handleExportSales('weekly')}
+                    className="w-full py-3 border border-ocean-200 text-ocean-700 rounded-xl font-medium flex items-center justify-center gap-2 hover:bg-ocean-50 transition-colors"
+                  >
+                    <ChartNoAxesCombined className="w-4 h-4" />
+                    <span>Exportar ventas semanales</span>
+                  </button>
+                  <button
+                    onClick={() => handleExportSales('monthly')}
+                    className="w-full py-3 border border-ocean-200 text-ocean-700 rounded-xl font-medium flex items-center justify-center gap-2 hover:bg-ocean-50 transition-colors"
+                  >
+                    <ChartNoAxesCombined className="w-4 h-4" />
+                    <span>Exportar ventas mensuales</span>
                   </button>
                   <button
                     onClick={handleBackupExport}
@@ -420,7 +550,7 @@ const AdminPanel = () => {
                         Reporte del día
                       </h3>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                       <div className="bg-ocean-50 rounded-2xl p-5">
                         <p className="text-sm text-ocean-600">Mesas cerradas hoy</p>
                         <p className="text-3xl font-display font-semibold text-ocean-900">
@@ -437,6 +567,12 @@ const AdminPanel = () => {
                         <p className="text-sm text-ocean-600">Productos vendidos</p>
                         <p className="text-3xl font-display font-semibold text-ocean-900">
                           {todaySummary.totalProducts}
+                        </p>
+                      </div>
+                      <div className="bg-ocean-50 rounded-2xl p-5">
+                        <p className="text-sm text-ocean-600">Propinas de hoy</p>
+                        <p className="text-3xl font-display font-semibold text-ocean-900">
+                          {formatPrice(todaySummary.totalTips)}
                         </p>
                       </div>
                     </div>
@@ -470,6 +606,39 @@ const AdminPanel = () => {
                         </p>
                       )}
                     </div>
+
+                    {todaysSales.length > 0 && (
+                      <div className="bg-white border border-ocean-100 rounded-3xl p-5">
+                        <p className="font-semibold text-ocean-900 mb-4">
+                          Ultimos cierres de hoy
+                        </p>
+                        <div className="space-y-4">
+                          {todaysSales.slice(0, 5).map((sale) => (
+                            <div
+                              key={sale.id}
+                              className="rounded-2xl border border-ocean-100 p-4"
+                            >
+                              <div className="flex flex-wrap items-center justify-between gap-3">
+                                <p className="font-medium text-ocean-900">
+                                  Mesa {sale.tableId}
+                                </p>
+                                <p className="text-sm text-ocean-500">
+                                  {paymentMethodLabel[sale.paymentMethod]}
+                                </p>
+                              </div>
+                              <div className="mt-3 grid gap-2 text-sm text-ocean-600 sm:grid-cols-2">
+                                <p>Apertura: {formatDateTime(sale.openedAt)}</p>
+                                <p>Cierre: {formatDateTime(sale.closedAt)}</p>
+                                <p>Tiempo: {formatElapsedMinutes(sale.elapsedMinutes)}</p>
+                                <p>Subtotal: {formatPrice(sale.subtotal)}</p>
+                                <p>Propina: {formatPrice(sale.tipAmount)}</p>
+                                <p>Total: {formatPrice(sale.total)}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </section>
 
                   <section className="space-y-4">
@@ -639,7 +808,9 @@ const AdminPanel = () => {
                         </label>
 
                         <div className="bg-ocean-50 rounded-2xl p-4 text-sm text-ocean-700">
-                          Los cambios del menú se guardan automáticamente en este navegador.
+                          {syncEnabled
+                            ? 'Los cambios del menú se guardan aquí y también se reflejan en el celular que use el mismo Supabase.'
+                            : 'Los cambios del menú se guardan automáticamente en este navegador.'}
                         </div>
 
                         <div className="bg-sand-100 rounded-2xl p-4 text-sm text-ocean-700">
