@@ -8,18 +8,42 @@ export interface CartItem {
   quantity: number;
 }
 
-interface OpenTable {
+export type PaymentMethod =
+  | 'debito'
+  | 'credito'
+  | 'efectivo'
+  | 'transferencia';
+
+export interface OpenTable {
   tableId: string;
   items: CartItem[];
+  openedAt: string;
   lastSentAt: string | null;
 }
 
 export interface SaleRecord {
   id: string;
   tableId: string;
+  openedAt: string;
   closedAt: string;
+  subtotal: number;
+  tipAmount: number;
   total: number;
   items: CartItem[];
+  paymentMethod: PaymentMethod;
+  elapsedMinutes: number;
+}
+
+interface CloseTableResult {
+  tableId: string;
+  items: CartItem[];
+  openedAt: string;
+  closedAt: string;
+  subtotal: number;
+  tipAmount: number;
+  total: number;
+  paymentMethod: PaymentMethod;
+  elapsedMinutes: number;
 }
 
 interface CartContextType {
@@ -36,7 +60,10 @@ interface CartContextType {
   setSelectedTable: (tableId: string) => void;
   openTables: Record<string, OpenTable>;
   submitCurrentOrder: () => OpenTable | null;
-  closeTable: () => { tableId: string; items: CartItem[] } | null;
+  closeTable: (
+    paymentMethod: PaymentMethod,
+    includeTip: boolean
+  ) => CloseTableResult | null;
   currentTableItems: CartItem[];
   currentTableTotal: number;
   salesHistory: SaleRecord[];
@@ -48,6 +75,7 @@ const ITEMS_KEY = 'espacio-kihnally-cart-items';
 const TABLE_KEY = 'espacio-kihnally-selected-table';
 const OPEN_TABLES_KEY = 'espacio-kihnally-open-tables';
 const SALES_HISTORY_KEY = 'espacio-kihnally-sales-history';
+const TIP_RATE = 0.1;
 
 const mergeItems = (items: CartItem[]) => {
   const merged = new Map<number, CartItem>();
@@ -81,6 +109,44 @@ const readStorage = <T,>(key: string, fallback: T): T => {
   }
 };
 
+const normalizeOpenTables = (tables: Record<string, OpenTable>) => {
+  return Object.fromEntries(
+    Object.entries(tables).map(([tableId, table]) => [
+      tableId,
+      {
+        tableId,
+        items: Array.isArray(table.items) ? table.items : [],
+        openedAt: table.openedAt ?? table.lastSentAt ?? new Date().toISOString(),
+        lastSentAt: table.lastSentAt ?? null,
+      },
+    ])
+  );
+};
+
+const normalizeSalesHistory = (sales: SaleRecord[]) => {
+  return sales.map((sale) => {
+    const openedAt = sale.openedAt ?? sale.closedAt;
+    const closedAt = sale.closedAt;
+    const elapsedMinutes =
+      sale.elapsedMinutes ??
+      Math.max(
+        0,
+        Math.round(
+          (new Date(closedAt).getTime() - new Date(openedAt).getTime()) / 60000
+        )
+      );
+
+    return {
+      ...sale,
+      openedAt,
+      subtotal: sale.subtotal ?? sale.total,
+      tipAmount: sale.tipAmount ?? 0,
+      paymentMethod: sale.paymentMethod ?? 'efectivo',
+      elapsedMinutes,
+    };
+  });
+};
+
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>(() => readStorage(ITEMS_KEY, []));
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -88,10 +154,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     readStorage(TABLE_KEY, '')
   );
   const [openTables, setOpenTables] = useState<Record<string, OpenTable>>(() =>
-    readStorage(OPEN_TABLES_KEY, {})
+    normalizeOpenTables(readStorage(OPEN_TABLES_KEY, {}))
   );
   const [salesHistory, setSalesHistory] = useState<SaleRecord[]>(() =>
-    readStorage(SALES_HISTORY_KEY, [])
+    normalizeSalesHistory(readStorage(SALES_HISTORY_KEY, []))
   );
 
   const persistItems = (nextItems: CartItem[]) => {
@@ -151,11 +217,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const submitCurrentOrder = () => {
     if (!selectedTable || items.length === 0) return null;
 
+    const now = new Date().toISOString();
     const existingTable = openTables[selectedTable];
     const nextTable: OpenTable = {
       tableId: selectedTable,
       items: mergeItems([...(existingTable?.items ?? []), ...items]),
-      lastSentAt: new Date().toISOString(),
+      openedAt: existingTable?.openedAt ?? now,
+      lastSentAt: now,
     };
 
     persistTables({
@@ -167,30 +235,46 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     return nextTable;
   };
 
-  const closeTable = () => {
+  const closeTable = (paymentMethod: PaymentMethod, includeTip: boolean) => {
     if (!selectedTable) return null;
 
     const existingTable = openTables[selectedTable];
     const allItems = mergeItems([...(existingTable?.items ?? []), ...items]);
     if (allItems.length === 0) return null;
 
+    const tableId = selectedTable;
+    const openedAt = existingTable?.openedAt ?? new Date().toISOString();
+    const closedAt = new Date().toISOString();
+    const subtotal = allItems.reduce(
+      (sum, item) => sum + item.price * item.quantity,
+      0
+    );
+    const tipAmount = includeTip ? Math.round(subtotal * TIP_RATE) : 0;
+    const total = subtotal + tipAmount;
+    const elapsedMinutes = Math.max(
+      0,
+      Math.round(
+        (new Date(closedAt).getTime() - new Date(openedAt).getTime()) / 60000
+      )
+    );
+
     const nextTables = { ...openTables };
     delete nextTables[selectedTable];
     persistTables(nextTables);
     persistItems([]);
-    const tableId = selectedTable;
-    const closedAt = new Date().toISOString();
-    const total = allItems.reduce(
-      (sum, item) => sum + item.price * item.quantity,
-      0
-    );
+
     persistSalesHistory([
       {
         id: `${tableId}-${closedAt}`,
         tableId,
+        openedAt,
         closedAt,
+        subtotal,
+        tipAmount,
         total,
         items: allItems,
+        paymentMethod,
+        elapsedMinutes,
       },
       ...salesHistory,
     ]);
@@ -199,6 +283,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     return {
       tableId,
       items: allItems,
+      openedAt,
+      closedAt,
+      subtotal,
+      tipAmount,
+      total,
+      paymentMethod,
+      elapsedMinutes,
     };
   };
 
