@@ -1,4 +1,20 @@
-import React, { createContext, useContext, useMemo, useState } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import {
+  deleteRemoteOpenTable,
+  fetchRemoteOpenTables,
+  fetchRemoteSalesHistory,
+  insertRemoteSaleRecord,
+  isSharedOrdersSyncEnabled,
+  saveRemoteOpenTable,
+} from '@/lib/cartSync';
 
 export interface CartItem {
   id: number;
@@ -59,11 +75,11 @@ interface CartContextType {
   selectedTable: string;
   setSelectedTable: (tableId: string) => void;
   openTables: Record<string, OpenTable>;
-  submitCurrentOrder: () => OpenTable | null;
+  submitCurrentOrder: () => Promise<OpenTable | null>;
   closeTable: (
     paymentMethod: PaymentMethod,
     includeTip: boolean
-  ) => CloseTableResult | null;
+  ) => Promise<CloseTableResult | null>;
   currentTableItems: CartItem[];
   currentTableTotal: number;
   salesHistory: SaleRecord[];
@@ -76,6 +92,7 @@ const TABLE_KEY = 'espacio-kihnally-selected-table';
 const OPEN_TABLES_KEY = 'espacio-kihnally-open-tables';
 const SALES_HISTORY_KEY = 'espacio-kihnally-sales-history';
 const TIP_RATE = 0.1;
+const REMOTE_POLL_INTERVAL_MS = 15000;
 
 const mergeItems = (items: CartItem[]) => {
   const merged = new Map<number, CartItem>();
@@ -148,6 +165,7 @@ const normalizeSalesHistory = (sales: SaleRecord[]) => {
 };
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
+  const syncEnabled = isSharedOrdersSyncEnabled();
   const [items, setItems] = useState<CartItem[]>(() => readStorage(ITEMS_KEY, []));
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [selectedTable, setSelectedTableState] = useState<string>(() =>
@@ -160,28 +178,75 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     normalizeSalesHistory(readStorage(SALES_HISTORY_KEY, []))
   );
 
+  const openTablesRef = useRef(openTables);
+  const salesHistoryRef = useRef(salesHistory);
+
+  useEffect(() => {
+    openTablesRef.current = openTables;
+  }, [openTables]);
+
+  useEffect(() => {
+    salesHistoryRef.current = salesHistory;
+  }, [salesHistory]);
+
   const persistItems = (nextItems: CartItem[]) => {
     setItems(nextItems);
     window.localStorage.setItem(ITEMS_KEY, JSON.stringify(nextItems));
   };
 
-  const persistTables = (nextTables: Record<string, OpenTable>) => {
-    setOpenTables(nextTables);
-    window.localStorage.setItem(OPEN_TABLES_KEY, JSON.stringify(nextTables));
-  };
+  const persistTables = useCallback((nextTables: Record<string, OpenTable>) => {
+    const normalized = normalizeOpenTables(nextTables);
+    setOpenTables(normalized);
+    window.localStorage.setItem(OPEN_TABLES_KEY, JSON.stringify(normalized));
+  }, []);
 
   const setSelectedTable = (tableId: string) => {
     setSelectedTableState(tableId);
     window.localStorage.setItem(TABLE_KEY, JSON.stringify(tableId));
   };
 
-  const persistSalesHistory = (nextSalesHistory: SaleRecord[]) => {
-    setSalesHistory(nextSalesHistory);
-    window.localStorage.setItem(
-      SALES_HISTORY_KEY,
-      JSON.stringify(nextSalesHistory)
-    );
-  };
+  const persistSalesHistory = useCallback((nextSalesHistory: SaleRecord[]) => {
+    const normalized = normalizeSalesHistory(nextSalesHistory);
+    setSalesHistory(normalized);
+    window.localStorage.setItem(SALES_HISTORY_KEY, JSON.stringify(normalized));
+  }, []);
+
+  const syncRemoteState = useCallback(async () => {
+    if (!syncEnabled) return;
+
+    try {
+      const [remoteTables, remoteSales] = await Promise.all([
+        fetchRemoteOpenTables(),
+        fetchRemoteSalesHistory(),
+      ]);
+
+      if (remoteTables) {
+        persistTables(remoteTables);
+      }
+
+      if (remoteSales) {
+        persistSalesHistory(remoteSales);
+      }
+    } catch {
+      // Keep local workflow usable if network sync briefly fails.
+    }
+  }, [persistSalesHistory, persistTables, syncEnabled]);
+
+  useEffect(() => {
+    if (!syncEnabled) return;
+    void syncRemoteState();
+  }, [syncEnabled, syncRemoteState]);
+
+  useEffect(() => {
+    if (!syncEnabled) return;
+
+    const intervalId = window.setInterval(() => {
+      if (document.hidden) return;
+      void syncRemoteState();
+    }, REMOTE_POLL_INTERVAL_MS);
+
+    return () => window.clearInterval(intervalId);
+  }, [syncEnabled, syncRemoteState]);
 
   const addItem = (newItem: Omit<CartItem, 'quantity'>) => {
     persistItems(
@@ -214,11 +279,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     persistItems([]);
   };
 
-  const submitCurrentOrder = () => {
+  const submitCurrentOrder = async () => {
     if (!selectedTable || items.length === 0) return null;
 
     const now = new Date().toISOString();
-    const existingTable = openTables[selectedTable];
+    const existingTable = openTablesRef.current[selectedTable];
     const nextTable: OpenTable = {
       tableId: selectedTable,
       items: mergeItems([...(existingTable?.items ?? []), ...items]),
@@ -226,19 +291,33 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       lastSentAt: now,
     };
 
-    persistTables({
-      ...openTables,
+    const nextTables = {
+      ...openTablesRef.current,
       [selectedTable]: nextTable,
-    });
+    };
+
+    persistTables(nextTables);
     persistItems([]);
+
+    if (syncEnabled) {
+      try {
+        await saveRemoteOpenTable(nextTable);
+        await syncRemoteState();
+      } catch {
+        // The local copy stays available; sync can recover on the next poll.
+      }
+    }
 
     return nextTable;
   };
 
-  const closeTable = (paymentMethod: PaymentMethod, includeTip: boolean) => {
+  const closeTable = async (
+    paymentMethod: PaymentMethod,
+    includeTip: boolean
+  ) => {
     if (!selectedTable) return null;
 
-    const existingTable = openTables[selectedTable];
+    const existingTable = openTablesRef.current[selectedTable];
     const allItems = mergeItems([...(existingTable?.items ?? []), ...items]);
     if (allItems.length === 0) return null;
 
@@ -258,27 +337,37 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       )
     );
 
-    const nextTables = { ...openTables };
+    const saleRecord: SaleRecord = {
+      id: `${tableId}-${closedAt}`,
+      tableId,
+      openedAt,
+      closedAt,
+      subtotal,
+      tipAmount,
+      total,
+      items: allItems,
+      paymentMethod,
+      elapsedMinutes,
+    };
+
+    const nextTables = { ...openTablesRef.current };
     delete nextTables[selectedTable];
     persistTables(nextTables);
     persistItems([]);
-
-    persistSalesHistory([
-      {
-        id: `${tableId}-${closedAt}`,
-        tableId,
-        openedAt,
-        closedAt,
-        subtotal,
-        tipAmount,
-        total,
-        items: allItems,
-        paymentMethod,
-        elapsedMinutes,
-      },
-      ...salesHistory,
-    ]);
+    persistSalesHistory([saleRecord, ...salesHistoryRef.current]);
     setSelectedTable('');
+
+    if (syncEnabled) {
+      try {
+        await Promise.all([
+          deleteRemoteOpenTable(tableId),
+          insertRemoteSaleRecord(saleRecord),
+        ]);
+        await syncRemoteState();
+      } catch {
+        // Keep local closure recorded; sync can be retried later.
+      }
+    }
 
     return {
       tableId,
