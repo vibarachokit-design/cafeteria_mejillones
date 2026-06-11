@@ -178,7 +178,7 @@ const CartDrawer = () => {
     window.open(whatsappUrl, '_blank');
   };
 
-  const handleSendCurrentOrder = () => {
+  const handleSendCurrentOrder = async () => {
     if (items.length === 0) {
       toast.error('Agrega productos antes de enviar un pedido parcial');
       return;
@@ -193,7 +193,7 @@ const CartDrawer = () => {
     openWhatsApp(
       buildOrderMessage(selectedTable, items, sentAt, 'Pedido Espacio Kihnally')
     );
-    submitCurrentOrder();
+    await submitCurrentOrder();
     toast.success('Pedido enviado. La mesa quedó abierta para seguir agregando productos.');
   };
 
@@ -214,8 +214,8 @@ const CartDrawer = () => {
     setIsPaymentModalOpen(true);
   };
 
-  const handleConfirmCloseTable = () => {
-    const result = closeTable(selectedPaymentMethod, includeTip);
+  const handleConfirmCloseTable = async () => {
+    const result = await closeTable(selectedPaymentMethod, includeTip);
     if (!result) {
       toast.error('No se pudo cerrar la mesa');
       return;
