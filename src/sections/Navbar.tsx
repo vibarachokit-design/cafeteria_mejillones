@@ -1,13 +1,19 @@
-﻿import { useState, useEffect } from 'react';
-import { Menu, X, ShoppingCart, ClipboardList } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { ClipboardList, Menu, ShoppingCart, X } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 
 const asset = (path: string) => `${import.meta.env.BASE_URL}${path.replace(/^\//, '')}`;
 
-const Navbar = () => {
+type NavbarProps = {
+  mode: 'customer' | 'staff';
+};
+
+const Navbar = ({ mode }: NavbarProps) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { totalItems, setIsCartOpen, selectedTable } = useCart();
+  const staffHref = `${import.meta.env.BASE_URL}?vista=garzona#menu`;
+  const customerHref = `${import.meta.env.BASE_URL}#inicio`;
 
   useEffect(() => {
     const handleScroll = () => {
@@ -24,7 +30,9 @@ const Navbar = () => {
     { name: 'Galería', href: '#galeria' },
     { name: 'Contacto', href: '#contacto' },
   ];
-  const mobileNavLinks = navLinks.slice(0, 2);
+
+  const desktopNavLinks = mode === 'staff' ? navLinks.slice(0, 2) : navLinks;
+  const mobileNavLinks = mode === 'staff' ? navLinks.slice(0, 2) : navLinks.slice(0, 3);
 
   return (
     <nav
@@ -36,7 +44,6 @@ const Navbar = () => {
     >
       <div className="section-padding max-w-7xl mx-auto">
         <div className="flex items-center justify-between">
-          {/* Logo */}
           <a href="#inicio" className="flex items-center gap-3 group">
             <img
               src={asset('logo-kihnally.png')}
@@ -47,9 +54,8 @@ const Navbar = () => {
             />
           </a>
 
-          {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-8">
-            {mobileNavLinks.map((link) => (
+            {desktopNavLinks.map((link) => (
               <a
                 key={link.name}
                 href={link.href}
@@ -62,11 +68,34 @@ const Navbar = () => {
                 {link.name}
               </a>
             ))}
+
+            {mode === 'customer' ? (
+              <a
+                href={staffHref}
+                className={`inline-flex items-center rounded-full px-4 py-2 text-sm font-medium transition-all duration-300 ${
+                  isScrolled
+                    ? 'bg-ocean-900 text-white hover:bg-ocean-800'
+                    : 'bg-white/15 text-white border border-white/25 hover:bg-white/25'
+                }`}
+              >
+                Acceso garzona
+              </a>
+            ) : (
+              <a
+                href={customerHref}
+                className={`inline-flex items-center rounded-full px-4 py-2 text-sm font-medium transition-all duration-300 ${
+                  isScrolled
+                    ? 'bg-sand-100 text-ocean-800 hover:bg-sand-200'
+                    : 'bg-white/15 text-white border border-white/25 hover:bg-white/25'
+                }`}
+              >
+                Ver versión cliente
+              </a>
+            )}
           </div>
 
-          {/* Right Side - Cart & Mobile Menu */}
           <div className="flex items-center gap-3">
-            {selectedTable && (
+            {mode === 'staff' && selectedTable ? (
               <div
                 className={`hidden sm:flex items-center gap-2 px-3 py-2 rounded-full text-sm font-medium ${
                   isScrolled
@@ -77,27 +106,40 @@ const Navbar = () => {
                 <ClipboardList className="w-4 h-4" />
                 <span>Mesa {selectedTable}</span>
               </div>
+            ) : null}
+
+            {mode === 'staff' ? (
+              <button
+                onClick={() => setIsCartOpen(true)}
+                className={`relative flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-full font-medium transition-all duration-300 hover:scale-105 ${
+                  isScrolled
+                    ? 'bg-ocean-500 text-white shadow-ocean hover:shadow-ocean-lg'
+                    : 'bg-white/20 backdrop-blur-sm text-white border border-white/30 hover:bg-white/30'
+                }`}
+              >
+                <ShoppingCart className="w-5 h-5" />
+                <span className="text-sm sm:text-base">
+                  {selectedTable ? `Mesa ${selectedTable}` : 'Pedido'}
+                </span>
+                {totalItems > 0 ? (
+                  <span className="absolute -top-2 -right-2 w-6 h-6 bg-coral-500 text-white text-xs font-bold rounded-full flex items-center justify-center animate-bounce">
+                    {totalItems}
+                  </span>
+                ) : null}
+              </button>
+            ) : (
+              <a
+                href="#menu"
+                className={`hidden sm:inline-flex items-center gap-2 px-4 py-2.5 rounded-full font-medium transition-all duration-300 ${
+                  isScrolled
+                    ? 'bg-ocean-500 text-white shadow-ocean hover:shadow-ocean-lg'
+                    : 'bg-white/20 backdrop-blur-sm text-white border border-white/30 hover:bg-white/30'
+                }`}
+              >
+                Ver carta
+              </a>
             )}
 
-            {/* Cart Button */}
-            <button
-              onClick={() => setIsCartOpen(true)}
-              className={`relative flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-full font-medium transition-all duration-300 hover:scale-105 ${
-                isScrolled
-                  ? 'bg-ocean-500 text-white shadow-ocean hover:shadow-ocean-lg'
-                  : 'bg-white/20 backdrop-blur-sm text-white border border-white/30 hover:bg-white/30'
-              }`}
-            >
-              <ShoppingCart className="w-5 h-5" />
-              <span className="text-sm sm:text-base">{selectedTable ? `Mesa ${selectedTable}` : 'Pedido'}</span>
-              {totalItems > 0 && (
-                <span className="absolute -top-2 -right-2 w-6 h-6 bg-coral-500 text-white text-xs font-bold rounded-full flex items-center justify-center animate-bounce">
-                  {totalItems}
-                </span>
-              )}
-            </button>
-
-            {/* Mobile Menu Button */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               className={`md:hidden p-2 rounded-lg transition-colors duration-300 ${
@@ -109,14 +151,13 @@ const Navbar = () => {
           </div>
         </div>
 
-        {/* Mobile Menu */}
         <div
           className={`md:hidden overflow-hidden transition-all duration-500 ${
             isMobileMenuOpen ? 'max-h-96 mt-4' : 'max-h-0'
           }`}
         >
           <div className="bg-white/95 backdrop-blur-xl rounded-2xl p-4 shadow-ocean-lg">
-            {navLinks.map((link) => (
+            {mobileNavLinks.map((link) => (
               <a
                 key={link.name}
                 href={link.href}
@@ -126,53 +167,82 @@ const Navbar = () => {
                 {link.name}
               </a>
             ))}
-            <button
-              onClick={() => {
-                setIsMobileMenuOpen(false);
-                setIsCartOpen(true);
-              }}
-              className="flex items-center justify-center gap-2 mt-3 w-full py-3 px-4 bg-ocean-500 text-white rounded-lg font-medium hover:bg-ocean-600 transition-colors duration-300"
-            >
-              <ShoppingCart className="w-4 h-4" />
-              <span>{selectedTable ? `Ver Mesa ${selectedTable}` : 'Ver Pedido'}</span>
-              {totalItems > 0 && (
-                <span className="ml-2 px-2 py-0.5 bg-white text-ocean-500 text-xs font-bold rounded-full">
-                  {totalItems}
-                </span>
-              )}
-            </button>
+
+            {mode === 'staff' ? (
+              <button
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  setIsCartOpen(true);
+                }}
+                className="flex items-center justify-center gap-2 mt-3 w-full py-3 px-4 bg-ocean-500 text-white rounded-lg font-medium hover:bg-ocean-600 transition-colors duration-300"
+              >
+                <ShoppingCart className="w-4 h-4" />
+                <span>{selectedTable ? `Ver Mesa ${selectedTable}` : 'Ver Pedido'}</span>
+                {totalItems > 0 ? (
+                  <span className="ml-2 px-2 py-0.5 bg-white text-ocean-500 text-xs font-bold rounded-full">
+                    {totalItems}
+                  </span>
+                ) : null}
+              </button>
+            ) : (
+              <a
+                href={staffHref}
+                className="mt-3 flex items-center justify-center gap-2 w-full py-3 px-4 bg-ocean-500 text-white rounded-lg font-medium hover:bg-ocean-600 transition-colors duration-300"
+              >
+                Acceso garzona
+              </a>
+            )}
           </div>
         </div>
       </div>
 
-      <div className="md:hidden fixed bottom-4 left-4 right-4 z-50">
-        <button
-          onClick={() => setIsCartOpen(true)}
-          className="w-full bg-ocean-900 text-white rounded-2xl px-4 py-4 shadow-2xl flex items-center justify-between"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-full bg-white/15 flex items-center justify-center">
-              <ShoppingCart className="w-5 h-5" />
+      {mode === 'staff' ? (
+        <div className="md:hidden fixed bottom-4 left-4 right-4 z-50">
+          <button
+            onClick={() => setIsCartOpen(true)}
+            className="w-full bg-ocean-900 text-white rounded-2xl px-4 py-4 shadow-2xl flex items-center justify-between"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-full bg-white/15 flex items-center justify-center">
+                <ShoppingCart className="w-5 h-5" />
+              </div>
+              <div className="text-left">
+                <p className="text-sm text-white/70">
+                  {selectedTable ? `Mesa ${selectedTable}` : 'Pedido actual'}
+                </p>
+                <p className="font-semibold">
+                  {totalItems > 0 ? `${totalItems} producto${totalItems === 1 ? '' : 's'}` : 'Abrir carrito'}
+                </p>
+              </div>
             </div>
-            <div className="text-left">
-              <p className="text-sm text-white/70">
-                {selectedTable ? `Mesa ${selectedTable}` : 'Pedido actual'}
-              </p>
-              <p className="font-semibold">
-                {totalItems > 0 ? `${totalItems} producto${totalItems === 1 ? '' : 's'}` : 'Abrir carrito'}
-              </p>
+            <span className="text-sm font-medium bg-white text-ocean-900 px-3 py-1 rounded-full">
+              Ver
+            </span>
+          </button>
+        </div>
+      ) : (
+        <div className="md:hidden fixed bottom-4 left-4 right-4 z-50">
+          <a
+            href="#menu"
+            className="w-full bg-ocean-900 text-white rounded-2xl px-4 py-4 shadow-2xl flex items-center justify-between"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-full bg-white/15 flex items-center justify-center">
+                <ShoppingCart className="w-5 h-5" />
+              </div>
+              <div className="text-left">
+                <p className="text-sm text-white/70">Explora la carta</p>
+                <p className="font-semibold">Ver productos y precios</p>
+              </div>
             </div>
-          </div>
-          <span className="text-sm font-medium bg-white text-ocean-900 px-3 py-1 rounded-full">
-            Ver
-          </span>
-        </button>
-      </div>
+            <span className="text-sm font-medium bg-white text-ocean-900 px-3 py-1 rounded-full">
+              Abrir
+            </span>
+          </a>
+        </div>
+      )}
     </nav>
   );
 };
 
 export default Navbar;
-
-
-

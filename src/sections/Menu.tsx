@@ -1,19 +1,23 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
-  UtensilsCrossed,
-  Star,
-  Plus,
   Check,
-  ShoppingCart,
-  Search,
   ClipboardList,
+  Plus,
+  Search,
+  ShoppingCart,
+  Star,
+  UtensilsCrossed,
 } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useMenu } from '@/context/MenuContext';
 import { menuCategories, type MenuProduct } from '@/data/menuData';
 import { toast } from 'sonner';
 
-const Menu = () => {
+type MenuProps = {
+  mode: 'customer' | 'staff';
+};
+
+const Menu = ({ mode }: MenuProps) => {
   const [activeCategory, setActiveCategory] = useState('novedades');
   const [addedItems, setAddedItems] = useState<number[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -33,9 +37,21 @@ const Menu = () => {
       minimumFractionDigits: 0,
     }).format(price);
 
+  const normalizedSearch = searchTerm.trim().toLowerCase();
+
+  const categoryCounts = useMemo(
+    () =>
+      Object.fromEntries(
+        menuCategories.map((category) => [
+          category.id,
+          products.filter((item) => item.category === category.id).length,
+        ])
+      ),
+    [products]
+  );
+
   const filteredItems = products.filter((item) => {
     const matchesCategory = item.category === activeCategory;
-    const normalizedSearch = searchTerm.trim().toLowerCase();
     if (!normalizedSearch) return matchesCategory;
 
     return (
@@ -44,6 +60,9 @@ const Menu = () => {
         item.description.toLowerCase().includes(normalizedSearch))
     );
   });
+
+  const activeCategoryName =
+    menuCategories.find((category) => category.id === activeCategory)?.name ?? 'Menú';
 
   const handleAddToCart = (item: MenuProduct) => {
     addItem({
@@ -64,121 +83,185 @@ const Menu = () => {
   return (
     <section
       id="menu"
-      className="py-20 pb-32 md:pb-20 bg-gradient-to-b from-white to-ocean-50/50"
+      className={`bg-gradient-to-b from-white to-ocean-50/50 ${
+        mode === 'staff' ? 'py-20 pb-32 md:pb-20' : 'py-20'
+      }`}
     >
       <div className="section-padding max-w-7xl mx-auto">
         <div className="text-center mb-12">
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-ocean-100 rounded-full mb-4">
             <UtensilsCrossed className="w-4 h-4 text-ocean-600" />
-            <span className="text-ocean-700 text-sm font-medium">Nuestra Carta</span>
+            <span className="text-ocean-700 text-sm font-medium">
+              {mode === 'staff' ? 'Menú Operativo' : 'Carta para clientes'}
+            </span>
           </div>
           <h2 className="font-display text-4xl sm:text-5xl font-bold text-ocean-900 mb-4">
-            Menú del Día
+            {mode === 'staff' ? 'Menú de Servicio' : 'Menú Kihnally'}
           </h2>
-          <p className="text-ocean-600 max-w-2xl mx-auto hidden md:block">
-            Descubre nuestra selección de productos preparados con ingredientes frescos
-            y café de especialidad. Sabores que celebran el norte de Chile.
+          <p className="text-ocean-600 max-w-2xl mx-auto">
+            {mode === 'staff'
+              ? 'Busca rápido, selecciona la mesa y agrega productos al pedido sin perder tiempo.'
+              : 'Explora la carta completa, revisa categorías, fotos y precios antes de pedir a la garzona.'}
           </p>
         </div>
 
-        <div className="md:hidden sticky top-[88px] z-30 -mx-4 px-4 py-3 mb-6 bg-white/95 backdrop-blur-xl border-y border-ocean-100 space-y-3">
-          <div className="flex items-center gap-3">
-            <div className="flex-1 min-w-0">
-              <label className="text-[11px] uppercase tracking-wide text-ocean-500 block mb-1">
-                Mesa activa
-              </label>
-              <div className="relative">
-                <ClipboardList className="w-4 h-4 text-ocean-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <select
-                  value={selectedTable}
-                  onChange={(event) => setSelectedTable(event.target.value)}
-                  className="w-full appearance-none pl-9 pr-4 py-3 rounded-2xl border border-ocean-200 bg-white text-ocean-900 font-medium focus:outline-none focus:border-ocean-500"
-                >
-                  <option value="">Selecciona mesa</option>
-                  {Array.from({ length: 20 }, (_, index) => (
-                    <option key={index + 1} value={`${index + 1}`}>
-                      Mesa {index + 1}
-                    </option>
-                  ))}
-                </select>
+        {mode === 'staff' ? (
+          <div className="md:hidden sticky top-[88px] z-30 -mx-4 px-4 py-3 mb-6 bg-white/95 backdrop-blur-xl border-y border-ocean-100 space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="flex-1 min-w-0">
+                <label className="text-[11px] uppercase tracking-wide text-ocean-500 block mb-1">
+                  Mesa activa
+                </label>
+                <div className="relative">
+                  <ClipboardList className="w-4 h-4 text-ocean-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <select
+                    value={selectedTable}
+                    onChange={(event) => setSelectedTable(event.target.value)}
+                    className="w-full appearance-none pl-9 pr-4 py-3 rounded-2xl border border-ocean-200 bg-white text-ocean-900 font-medium focus:outline-none focus:border-ocean-500"
+                  >
+                    <option value="">Selecciona mesa</option>
+                    {Array.from({ length: 20 }, (_, index) => (
+                      <option key={index + 1} value={`${index + 1}`}>
+                        Mesa {index + 1}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
+              <button
+                onClick={() => setIsCartOpen(true)}
+                className="shrink-0 inline-flex items-center gap-2 px-4 py-3 bg-ocean-900 text-white rounded-2xl text-sm font-medium"
+              >
+                <ShoppingCart className="w-4 h-4" />
+                <span>{totalItems > 0 ? totalItems : 'Ver'}</span>
+              </button>
             </div>
-            <button
-              onClick={() => setIsCartOpen(true)}
-              className="shrink-0 inline-flex items-center gap-2 px-4 py-3 bg-ocean-900 text-white rounded-2xl text-sm font-medium"
-            >
-              <ShoppingCart className="w-4 h-4" />
-              <span>{totalItems > 0 ? totalItems : 'Ver'}</span>
-            </button>
-          </div>
 
-          <div className="relative">
-            <Search className="w-4 h-4 text-ocean-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-              placeholder="Buscar producto..."
-              className="w-full pl-9 pr-4 py-3 rounded-2xl border border-ocean-200 bg-white text-ocean-900 focus:outline-none focus:border-ocean-500"
-            />
+            <div className="relative">
+              <Search className="w-4 h-4 text-ocean-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder="Buscar producto..."
+                className="w-full pl-9 pr-4 py-3 rounded-2xl border border-ocean-200 bg-white text-ocean-900 focus:outline-none focus:border-ocean-500"
+              />
+            </div>
           </div>
-        </div>
-
-        <div className="hidden md:block mb-6">
-          <div className="relative max-w-md mx-auto">
-            <Search className="w-4 h-4 text-ocean-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-              placeholder="Buscar producto por nombre o descripción..."
-              className="w-full pl-9 pr-4 py-3 rounded-2xl border border-ocean-200 bg-white text-ocean-900 focus:outline-none focus:border-ocean-500"
-            />
+        ) : (
+          <div className="mb-6 md:mb-10">
+            <div className="relative max-w-xl mx-auto">
+              <Search className="w-4 h-4 text-ocean-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder="Busca por producto, sabor o descripción..."
+                className="w-full pl-9 pr-4 py-3 rounded-2xl border border-ocean-200 bg-white text-ocean-900 focus:outline-none focus:border-ocean-500 shadow-sm"
+              />
+            </div>
           </div>
-        </div>
+        )}
 
-        <div className="sticky top-[184px] md:top-[84px] z-20 -mx-4 px-4 py-3 md:py-0 md:px-0 mb-8 md:mb-12 bg-white/95 md:bg-transparent backdrop-blur-xl md:backdrop-blur-0 border-y border-ocean-100 md:border-y-0">
+        {mode === 'staff' ? (
+          <div className="hidden md:block mb-6">
+            <div className="relative max-w-md mx-auto">
+              <Search className="w-4 h-4 text-ocean-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder="Buscar producto por nombre o descripción..."
+                className="w-full pl-9 pr-4 py-3 rounded-2xl border border-ocean-200 bg-white text-ocean-900 focus:outline-none focus:border-ocean-500"
+              />
+            </div>
+          </div>
+        ) : null}
+
+        <div
+          className={`z-20 -mx-4 px-4 py-3 md:px-0 mb-8 md:mb-12 bg-white/95 md:bg-transparent backdrop-blur-xl md:backdrop-blur-0 border-y border-ocean-100 md:border-y-0 ${
+            mode === 'staff' ? 'sticky top-[184px] md:top-[84px]' : 'sticky top-[84px]'
+          }`}
+        >
           <div className="flex justify-start md:justify-center gap-2 overflow-x-auto pb-1 md:pb-4 scrollbar-hide">
             {menuCategories.map((category) => {
               const Icon = category.icon;
+              const isActive = activeCategory === category.id;
+
               return (
                 <button
                   key={category.id}
                   onClick={() => setActiveCategory(category.id)}
                   className={`flex items-center gap-2 px-4 md:px-5 py-3 rounded-2xl md:rounded-full font-medium transition-all duration-300 whitespace-nowrap text-sm md:text-base min-w-max ${
-                    activeCategory === category.id
+                    isActive
                       ? 'bg-ocean-500 text-white shadow-ocean scale-105'
                       : 'bg-white text-ocean-700 hover:bg-ocean-50 border border-ocean-200'
                   }`}
                 >
                   <Icon className="w-5 h-5" />
                   <span>{category.name}</span>
+                  {mode === 'customer' ? (
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-[11px] ${
+                        isActive ? 'bg-white/20 text-white' : 'bg-ocean-50 text-ocean-500'
+                      }`}
+                    >
+                      {categoryCounts[category.id] ?? 0}
+                    </span>
+                  ) : null}
                 </button>
               );
             })}
           </div>
         </div>
 
+        {mode === 'customer' ? (
+          <div className="mb-6 rounded-3xl bg-ocean-900 text-white p-5 md:p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4 shadow-xl">
+            <div>
+              <p className="text-white/70 text-sm uppercase tracking-[0.24em] mb-2">
+                Pide con la garzona
+              </p>
+              <h3 className="font-display text-2xl md:text-3xl">
+                {activeCategoryName}
+              </h3>
+              <p className="text-white/80 mt-2">
+                {filteredItems.length} producto{filteredItems.length === 1 ? '' : 's'} en esta categoría.
+              </p>
+            </div>
+            <div className="rounded-2xl bg-white/10 border border-white/15 px-4 py-3 text-sm text-white/85 max-w-md">
+              Revisa la carta, elige tus favoritos y luego pide a la garzona para que lo agregue a tu mesa.
+            </div>
+          </div>
+        ) : null}
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
           {filteredItems.map((item, index) => (
             <div
               key={item.id}
-              className="group bg-white rounded-2xl overflow-hidden shadow-ocean hover:shadow-ocean-lg transition-all duration-500 md:hover:-translate-y-2"
+              className={`group bg-white rounded-2xl overflow-hidden shadow-ocean hover:shadow-ocean-lg transition-all duration-500 ${
+                mode === 'staff' ? 'md:hover:-translate-y-2' : 'hover:-translate-y-1'
+              }`}
               style={{ animationDelay: `${index * 100}ms` }}
             >
-              <div className="relative h-40 md:h-48 overflow-hidden">
+              <div className={`relative overflow-hidden ${mode === 'customer' ? 'h-52 md:h-60' : 'h-40 md:h-48'}`}>
                 <img
                   src={item.image}
                   alt={item.name}
                   className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                 />
-                {item.popular && (
+                {item.popular ? (
                   <div className="absolute top-3 left-3 flex items-center gap-1 px-3 py-1 bg-coral-500 text-white text-xs font-medium rounded-full">
                     <Star className="w-3 h-3 fill-current" />
                     <span>Popular</span>
                   </div>
-                )}
+                ) : null}
+                {mode === 'customer' ? (
+                  <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-ocean-950/80 to-transparent">
+                    <div className="inline-flex items-center rounded-full bg-white/15 px-3 py-1 text-xs font-medium text-white backdrop-blur-sm">
+                      Pídelo a la garzona
+                    </div>
+                  </div>
+                ) : null}
               </div>
 
-              <div className="p-4 md:p-5">
+              <div className={`${mode === 'customer' ? 'p-5 md:p-6' : 'p-4 md:p-5'}`}>
                 <div className="flex justify-between items-start mb-2 gap-3">
                   <h3 className="font-display text-lg md:text-xl font-semibold text-ocean-900 group-hover:text-ocean-600 transition-colors leading-tight">
                     {item.name}
@@ -190,46 +273,72 @@ const Menu = () => {
                 <p className="text-ocean-600 text-sm mb-4 line-clamp-3 md:line-clamp-none">
                   {item.description}
                 </p>
-                <button
-                  onClick={() => handleAddToCart(item)}
-                  className={`w-full py-3 rounded-xl font-medium transition-all duration-300 flex items-center justify-center gap-2 ${
-                    addedItems.includes(item.id)
-                      ? 'bg-green-500 text-white'
-                      : 'border-2 border-ocean-200 text-ocean-600 hover:bg-ocean-500 hover:text-white hover:border-ocean-500'
-                  }`}
-                >
-                  {addedItems.includes(item.id) ? (
-                    <>
-                      <Check className="w-5 h-5" />
-                      <span>Agregado</span>
-                    </>
-                  ) : (
-                    <>
-                      <Plus className="w-5 h-5" />
-                      <span>Agregar al pedido</span>
-                    </>
-                  )}
-                </button>
+
+                {mode === 'staff' ? (
+                  <button
+                    onClick={() => handleAddToCart(item)}
+                    className={`w-full py-3 rounded-xl font-medium transition-all duration-300 flex items-center justify-center gap-2 ${
+                      addedItems.includes(item.id)
+                        ? 'bg-green-500 text-white'
+                        : 'border-2 border-ocean-200 text-ocean-600 hover:bg-ocean-500 hover:text-white hover:border-ocean-500'
+                    }`}
+                  >
+                    {addedItems.includes(item.id) ? (
+                      <>
+                        <Check className="w-5 h-5" />
+                        <span>Agregado</span>
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="w-5 h-5" />
+                        <span>Agregar al pedido</span>
+                      </>
+                    )}
+                  </button>
+                ) : (
+                  <div className="flex items-center justify-between gap-3 rounded-2xl border border-ocean-100 bg-ocean-50/70 px-4 py-3">
+                    <div>
+                      <p className="text-sm font-semibold text-ocean-900">Listo para pedir</p>
+                      <p className="text-xs text-ocean-600">
+                        Muéstrale este producto a la garzona.
+                      </p>
+                    </div>
+                    <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-ocean-700 border border-ocean-100">
+                      {activeCategoryName}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           ))}
         </div>
 
-        {filteredItems.length === 0 && (
+        {filteredItems.length === 0 ? (
           <div className="text-center py-12 text-ocean-600">
             No encontramos productos para esa búsqueda en esta categoría.
           </div>
-        )}
+        ) : null}
 
-        <div className="hidden md:block text-center mt-12">
-          <button
-            onClick={() => setIsCartOpen(true)}
-            className="inline-flex items-center gap-2 px-8 py-4 bg-ocean-900 text-white rounded-full font-medium hover:bg-ocean-800 transition-colors duration-300"
-          >
-            <UtensilsCrossed className="w-5 h-5" />
-            <span>Ver Mi Pedido</span>
-          </button>
-        </div>
+        {mode === 'staff' ? (
+          <div className="hidden md:block text-center mt-12">
+            <button
+              onClick={() => setIsCartOpen(true)}
+              className="inline-flex items-center gap-2 px-8 py-4 bg-ocean-900 text-white rounded-full font-medium hover:bg-ocean-800 transition-colors duration-300"
+            >
+              <UtensilsCrossed className="w-5 h-5" />
+              <span>Ver Mi Pedido</span>
+            </button>
+          </div>
+        ) : (
+          <div className="text-center mt-12">
+            <a
+              href={`${import.meta.env.BASE_URL}?vista=garzona#menu`}
+              className="inline-flex items-center gap-2 px-8 py-4 bg-white text-ocean-900 rounded-full font-medium border border-ocean-200 hover:bg-ocean-50 transition-colors duration-300"
+            >
+              <span>¿Eres parte del equipo? Ir a modo garzona</span>
+            </a>
+          </div>
+        )}
       </div>
     </section>
   );

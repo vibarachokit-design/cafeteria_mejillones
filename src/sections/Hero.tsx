@@ -1,44 +1,48 @@
-﻿import { useEffect, useRef, useState } from 'react';
-import { ChevronDown, MapPin, Clock, Phone, Home, ShoppingBag, Truck, ShoppingCart } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import {
+  ChevronDown,
+  Clock,
+  Home,
+  MapPin,
+  Phone,
+  ShoppingBag,
+  ShoppingCart,
+  Truck,
+} from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 
 const asset = (path: string) => `${import.meta.env.BASE_URL}${path.replace(/^\//, '')}`;
 
-const Hero = () => {
+type HeroProps = {
+  mode: 'customer' | 'staff';
+};
+
+const Hero = ({ mode }: HeroProps) => {
   const waveRef1 = useRef<SVGPathElement>(null);
   const waveRef2 = useRef<SVGPathElement>(null);
   const waveRef3 = useRef<SVGPathElement>(null);
   const [isOpen, setIsOpen] = useState(false);
   const { totalItems, setIsCartOpen } = useCart();
+  const staffHref = `${import.meta.env.BASE_URL}?vista=garzona#menu`;
 
-  // Check if business is open
   useEffect(() => {
     const checkOpenStatus = () => {
       const now = new Date();
-      const day = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
+      const day = now.getDay();
       const hour = now.getHours();
       const minute = now.getMinutes();
       const currentTime = hour * 60 + minute;
 
-      // Tuesday is closed
       if (day === 2) {
         setIsOpen(false);
         return;
       }
 
-      // Sunday: 17:00 - 23:30
-      if (day === 0) {
+      if (day === 0 || day === 5 || day === 6) {
         setIsOpen(currentTime >= 17 * 60 && currentTime <= 23 * 60 + 30);
         return;
       }
 
-      // Friday and Saturday: 17:00 - 23:30
-      if (day === 5 || day === 6) {
-        setIsOpen(currentTime >= 17 * 60 && currentTime <= 23 * 60 + 30);
-        return;
-      }
-
-      // Monday, Wednesday, Thursday: 17:00 - 23:00
       setIsOpen(currentTime >= 17 * 60 && currentTime <= 23 * 60);
     };
 
@@ -53,14 +57,19 @@ const Hero = () => {
 
     const animateWaves = () => {
       offset += 0.01;
-      
-      const generateWavePath = (amplitude: number, frequency: number, phase: number, yOffset: number) => {
+
+      const generateWavePath = (
+        amplitude: number,
+        frequency: number,
+        phase: number,
+        yOffset: number
+      ) => {
         let path = `M 0 ${yOffset}`;
         for (let x = 0; x <= 1440; x += 10) {
-          const y = yOffset + Math.sin((x * frequency) + offset + phase) * amplitude;
+          const y = yOffset + Math.sin(x * frequency + offset + phase) * amplitude;
           path += ` L ${x} ${y}`;
         }
-        path += ` L 1440 1080 L 0 1080 Z`;
+        path += ' L 1440 1080 L 0 1080 Z';
         return path;
       };
 
@@ -81,9 +90,28 @@ const Hero = () => {
     return () => cancelAnimationFrame(animationId);
   }, []);
 
+  const customerIntro = {
+    eyebrow: 'Carta para explorar',
+    slogan: 'Sabores del norte, sin apuro',
+    description:
+      'Revisa todos nuestros productos, descubre favoritos de la casa y luego pide a la garzona lo que más te guste.',
+    primary: 'Explorar menú',
+    secondary: 'Acceso garzona',
+  };
+
+  const staffIntro = {
+    eyebrow: 'Modo operativo',
+    slogan: 'Toma pedidos con rapidez',
+    description:
+      'Selecciona mesa, arma pedidos, mantenlos abiertos y envía la cuenta final sin perder el ritmo del servicio.',
+    primary: 'Ir al menú operativo',
+    secondary: 'Ver mi pedido',
+  };
+
+  const intro = mode === 'customer' ? customerIntro : staffIntro;
+
   return (
-    <section id="inicio" className="relative min-h-screen overflow-hidden">
-      {/* Background Image */}
+    <section id="inicio" className="relative min-h-[88vh] md:min-h-screen overflow-hidden">
       <div className="absolute inset-0">
         <img
           src={asset('hero-cafe.jpg')}
@@ -93,7 +121,6 @@ const Hero = () => {
         <div className="absolute inset-0 bg-gradient-to-b from-ocean-900/60 via-ocean-800/40 to-ocean-900/70" />
       </div>
 
-      {/* Animated Waves */}
       <svg
         className="absolute bottom-0 left-0 w-full h-full pointer-events-none"
         viewBox="0 0 1440 1080"
@@ -118,11 +145,10 @@ const Hero = () => {
         <path ref={waveRef3} fill="url(#waveGradient3)" />
       </svg>
 
-      {/* Floating Bubbles */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        {[...Array(8)].map((_, i) => (
+        {[...Array(8)].map((_, index) => (
           <div
-            key={i}
+            key={index}
             className="absolute rounded-full bg-white/10 backdrop-blur-sm animate-bubble"
             style={{
               width: `${Math.random() * 30 + 10}px`,
@@ -135,48 +161,45 @@ const Hero = () => {
         ))}
       </div>
 
-      {/* Content */}
-      <div className="relative z-10 min-h-screen flex flex-col justify-center items-center section-padding pt-20">
+      <div className="relative z-10 min-h-[88vh] md:min-h-screen flex flex-col justify-center items-center section-padding pt-20 pb-24 md:pb-0">
         <div className="text-center max-w-4xl mx-auto">
-          {/* Logo */}
-          <div className="mb-8">
+          <div className="mb-6 md:mb-8">
             <img
               src={asset('logo-kihnally.png')}
               alt="Espacio Kihnally"
-              className="h-24 sm:h-32 mx-auto drop-shadow-2xl"
+              className="h-20 sm:h-32 mx-auto drop-shadow-2xl"
             />
           </div>
 
-          {/* Status Badge */}
-          <div className={`inline-flex items-center gap-2 px-4 py-2 backdrop-blur-md rounded-full border mb-6 ${
-            isOpen 
-              ? 'bg-green-500/20 border-green-400/30' 
-              : 'bg-red-500/20 border-red-400/30'
-          }`}>
-            <span className={`w-2 h-2 rounded-full ${isOpen ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`} />
+          <div
+            className={`inline-flex items-center gap-2 px-4 py-2 backdrop-blur-md rounded-full border mb-4 ${
+              isOpen
+                ? 'bg-green-500/20 border-green-400/30'
+                : 'bg-red-500/20 border-red-400/30'
+            }`}
+          >
+            <span
+              className={`w-2 h-2 rounded-full ${isOpen ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`}
+            />
             <span className={`text-sm font-medium ${isOpen ? 'text-green-300' : 'text-red-300'}`}>
               {isOpen ? 'Abierto ahora' : 'Cerrado'}
             </span>
           </div>
 
-          {/* Location Badge */}
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-md rounded-full border border-white/20 mb-6">
             <MapPin className="w-4 h-4 text-ocean-300" />
-            <span className="text-white/90 text-sm font-medium">Mejillones, Chile</span>
+            <span className="text-white/90 text-sm font-medium">{intro.eyebrow}</span>
           </div>
 
-          {/* Slogan */}
-          <p className="text-2xl sm:text-3xl text-ocean-300 mb-6 font-light tracking-wide">
-            Donde el Norte se siente
+          <p className="text-xl sm:text-3xl text-ocean-300 mb-4 md:mb-6 font-light tracking-wide">
+            {intro.slogan}
           </p>
 
-          <p className="text-base sm:text-lg text-white/60 mb-10 max-w-2xl mx-auto">
-            Disfruta de la mejor experiencia gastronómica en Mejillones. 
-            Café de especialidad, pizzas artesanales, refrescos del desierto y dulzura del norte en un ambiente único.
+          <p className="text-base sm:text-lg text-white/70 mb-10 max-w-2xl mx-auto">
+            {intro.description}
           </p>
 
-          {/* Service Types */}
-          <div className="flex flex-wrap justify-center gap-3 mb-8">
+          <div className="hidden sm:flex flex-wrap justify-center gap-3 mb-8">
             <div className="flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-md rounded-full border border-white/20">
               <Home className="w-4 h-4 text-ocean-300" />
               <span className="text-white/90 text-sm">En el local</span>
@@ -191,60 +214,90 @@ const Hero = () => {
             </div>
           </div>
 
-          {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center mb-8 md:mb-12">
             <a
               href="#menu"
-              className="group inline-flex items-center justify-center gap-2 px-8 py-4 bg-ocean-500 text-white rounded-full font-medium text-lg shadow-ocean hover:shadow-ocean-lg hover:scale-105 transition-all duration-300"
+              className="group inline-flex items-center justify-center gap-2 px-6 sm:px-8 py-4 bg-ocean-500 text-white rounded-full font-medium text-base sm:text-lg shadow-ocean hover:shadow-ocean-lg hover:scale-105 transition-all duration-300"
             >
-              <span>Ver Menú</span>
+              <span>{intro.primary}</span>
               <ChevronDown className="w-5 h-5 group-hover:translate-y-1 transition-transform" />
             </a>
-            <button
-              onClick={() => setIsCartOpen(true)}
-              className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white/10 backdrop-blur-md text-white rounded-full font-medium text-lg border border-white/30 hover:bg-white/20 transition-all duration-300"
-            >
-              <ShoppingCart className="w-5 h-5" />
-              <span>Ver Mi Pedido</span>
-              {totalItems > 0 && (
-                <span className="ml-2 px-2 py-0.5 bg-coral-500 text-white text-sm font-bold rounded-full">
-                  {totalItems}
-                </span>
-              )}
-            </button>
+
+            {mode === 'customer' ? (
+              <a
+                href={staffHref}
+                className="inline-flex items-center justify-center gap-2 px-6 sm:px-8 py-4 bg-white/10 backdrop-blur-md text-white rounded-full font-medium text-base sm:text-lg border border-white/30 hover:bg-white/20 transition-all duration-300"
+              >
+                <span>{intro.secondary}</span>
+              </a>
+            ) : (
+              <button
+                onClick={() => setIsCartOpen(true)}
+                className="inline-flex items-center justify-center gap-2 px-6 sm:px-8 py-4 bg-white/10 backdrop-blur-md text-white rounded-full font-medium text-base sm:text-lg border border-white/30 hover:bg-white/20 transition-all duration-300"
+              >
+                <ShoppingCart className="w-5 h-5" />
+                <span>{intro.secondary}</span>
+                {totalItems > 0 ? (
+                  <span className="ml-2 px-2 py-0.5 bg-coral-500 text-white text-sm font-bold rounded-full">
+                    {totalItems}
+                  </span>
+                ) : null}
+              </button>
+            )}
           </div>
 
-          {/* Info Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl mx-auto">
-            <div className="flex items-center gap-3 px-5 py-4 bg-white/10 backdrop-blur-md rounded-xl border border-white/20">
-              <Clock className="w-5 h-5 text-ocean-300" />
-              <div className="text-left">
-                <p className="text-white/60 text-xs">Horario</p>
-                <p className="text-white font-medium">Lun, Mié-Jue: 17-23h</p>
-                <p className="text-white/70 text-xs">Vie-Dom: 17-23:30h</p>
+          {mode === 'customer' ? (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl mx-auto">
+              <div className="flex items-center gap-3 px-5 py-4 bg-white/10 backdrop-blur-md rounded-xl border border-white/20">
+                <Clock className="w-5 h-5 text-ocean-300" />
+                <div className="text-left">
+                  <p className="text-white/60 text-xs">Pide con calma</p>
+                  <p className="text-white font-medium">Revisa fotos y precios</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 px-5 py-4 bg-white/10 backdrop-blur-md rounded-xl border border-white/20">
+                <MapPin className="w-5 h-5 text-ocean-300" />
+                <div className="text-left">
+                  <p className="text-white/60 text-xs">Ubicación</p>
+                  <p className="text-white font-medium">Pje. Lord Cochrane 049</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 px-5 py-4 bg-white/10 backdrop-blur-md rounded-xl border border-white/20">
+                <Phone className="w-5 h-5 text-ocean-300" />
+                <div className="text-left">
+                  <p className="text-white/60 text-xs">Consulta</p>
+                  <p className="text-white font-medium">Pide a la garzona</p>
+                </div>
               </div>
             </div>
-            <div className="flex items-center gap-3 px-5 py-4 bg-white/10 backdrop-blur-md rounded-xl border border-white/20">
-              <MapPin className="w-5 h-5 text-ocean-300" />
-              <div className="text-left">
-                <p className="text-white/60 text-xs">Ubicación</p>
-                <p className="text-white font-medium">Pje. Lord Cochrane 049</p>
-                <p className="text-white/70 text-xs">Mejillones</p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl mx-auto">
+              <div className="flex items-center gap-3 px-5 py-4 bg-white/10 backdrop-blur-md rounded-xl border border-white/20">
+                <Clock className="w-5 h-5 text-ocean-300" />
+                <div className="text-left">
+                  <p className="text-white/60 text-xs">Operación rápida</p>
+                  <p className="text-white font-medium">Mesa primero, pedido después</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 px-5 py-4 bg-white/10 backdrop-blur-md rounded-xl border border-white/20">
+                <MapPin className="w-5 h-5 text-ocean-300" />
+                <div className="text-left">
+                  <p className="text-white/60 text-xs">Turno activo</p>
+                  <p className="text-white font-medium">Mesas abiertas sincronizadas</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 px-5 py-4 bg-white/10 backdrop-blur-md rounded-xl border border-white/20">
+                <Phone className="w-5 h-5 text-ocean-300" />
+                <div className="text-left">
+                  <p className="text-white/60 text-xs">Cierre</p>
+                  <p className="text-white font-medium">Cuenta final por WhatsApp</p>
+                </div>
               </div>
             </div>
-            <div className="flex items-center gap-3 px-5 py-4 bg-white/10 backdrop-blur-md rounded-xl border border-white/20">
-              <Phone className="w-5 h-5 text-ocean-300" />
-              <div className="text-left">
-                <p className="text-white/60 text-xs">Contacto</p>
-                <p className="text-white font-medium">+56 9 3380 6302</p>
-                <p className="text-white/70 text-xs">WhatsApp</p>
-              </div>
-            </div>
-          </div>
+          )}
         </div>
       </div>
 
-      {/* Bottom Wave Decoration */}
       <div className="absolute bottom-0 left-0 right-0">
         <svg viewBox="0 0 1440 120" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full">
           <path
@@ -258,6 +311,3 @@ const Hero = () => {
 };
 
 export default Hero;
-
-
-

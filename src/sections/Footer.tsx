@@ -1,16 +1,29 @@
-import { Anchor, Heart, Instagram, MessageCircle, MapPin } from 'lucide-react';
+import { Anchor, Heart, Instagram, MapPin, MessageCircle } from 'lucide-react';
 
-const Footer = () => {
+type FooterProps = {
+  mode: 'customer' | 'staff';
+};
+
+const Footer = ({ mode }: FooterProps) => {
   const currentYear = new Date().getFullYear();
+  const staffHref = `${import.meta.env.BASE_URL}?vista=garzona#menu`;
+  const customerHref = `${import.meta.env.BASE_URL}#inicio`;
 
   const footerLinks = {
-    navegacion: [
-      { name: 'Inicio', href: '#inicio' },
-      { name: 'Menú', href: '#menu' },
-      { name: 'Nosotros', href: '#nosotros' },
-      { name: 'Galería', href: '#galeria' },
-      { name: 'Contacto', href: '#contacto' },
-    ],
+    navegacion:
+      mode === 'staff'
+        ? [
+            { name: 'Inicio', href: '#inicio' },
+            { name: 'Menú operativo', href: '#menu' },
+            { name: 'Versión cliente', href: customerHref },
+          ]
+        : [
+            { name: 'Inicio', href: '#inicio' },
+            { name: 'Menú', href: '#menu' },
+            { name: 'Nosotros', href: '#nosotros' },
+            { name: 'Galería', href: '#galeria' },
+            { name: 'Contacto', href: '#contacto' },
+          ],
     servicios: [
       { name: 'Café de especialidad', href: '#menu' },
       { name: 'Pizzas artesanales', href: '#menu' },
@@ -18,15 +31,10 @@ const Footer = () => {
       { name: 'Para llevar', href: '#contacto' },
       { name: 'A domicilio', href: '#contacto' },
     ],
-    legal: [
-      { name: 'Términos y condiciones', href: '#' },
-      { name: 'Política de privacidad', href: '#' },
-    ],
   };
 
   return (
     <footer className="bg-ocean-900 text-white">
-      {/* Wave Divider */}
       <div className="relative h-20 bg-ocean-50/50">
         <svg
           className="absolute bottom-0 w-full h-20"
@@ -43,7 +51,6 @@ const Footer = () => {
 
       <div className="section-padding max-w-7xl mx-auto pt-10 pb-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 mb-12">
-          {/* Brand */}
           <div className="lg:col-span-1">
             <a href="#inicio" className="flex items-center gap-2 mb-4">
               <div className="p-2 bg-ocean-500 rounded-full">
@@ -51,12 +58,11 @@ const Footer = () => {
               </div>
               <span className="font-display text-xl font-semibold">Espacio Kihnally</span>
             </a>
-            <p className="text-ocean-200 text-sm mb-2">
-              Donde el Norte se siente
-            </p>
+            <p className="text-ocean-200 text-sm mb-2">Donde el Norte se siente</p>
             <p className="text-ocean-300 text-sm mb-6">
-              Disfruta de la mejor experiencia gastronómica en Mejillones. 
-              Café de especialidad, pizzas artesanales y sabores del norte.
+              {mode === 'staff'
+                ? 'Versión operativa para garzona y administración del servicio.'
+                : 'Explora nuestra carta digital, descubre productos y pide a la garzona tus favoritos.'}
             </p>
             <div className="flex gap-3">
               <a
@@ -80,7 +86,6 @@ const Footer = () => {
             </div>
           </div>
 
-          {/* Navigation */}
           <div>
             <h4 className="font-display font-semibold text-lg mb-4">Navegación</h4>
             <ul className="space-y-2">
@@ -97,7 +102,6 @@ const Footer = () => {
             </ul>
           </div>
 
-          {/* Services */}
           <div>
             <h4 className="font-display font-semibold text-lg mb-4">Servicios</h4>
             <ul className="space-y-2">
@@ -114,32 +118,51 @@ const Footer = () => {
             </ul>
           </div>
 
-          {/* Contact */}
           <div>
-            <h4 className="font-display font-semibold text-lg mb-4">Contacto</h4>
+            <h4 className="font-display font-semibold text-lg mb-4">
+              {mode === 'staff' ? 'Accesos' : 'Contacto'}
+            </h4>
             <div className="space-y-3">
-              <div className="flex items-start gap-3">
-                <MapPin className="w-5 h-5 text-ocean-400 mt-0.5" />
-                <div>
-                  <p className="text-ocean-200 text-sm">Pje. Lord Cochrane 049</p>
-                  <p className="text-ocean-300 text-xs">Mejillones, Chile</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <MessageCircle className="w-5 h-5 text-ocean-400" />
-                <p className="text-ocean-200 text-sm">+56 9 3380 6302</p>
-              </div>
-              <div className="flex items-center gap-3">
-                <svg className="w-5 h-5 text-ocean-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-                <p className="text-ocean-200 text-sm">espaciokihnally@gmail.com</p>
-              </div>
+              {mode === 'staff' ? (
+                <>
+                  <a
+                    href={customerHref}
+                    className="block rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-ocean-100 hover:bg-white/10 transition-colors"
+                  >
+                    Abrir versión cliente
+                  </a>
+                  <a
+                    href={staffHref}
+                    className="block rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-ocean-100 hover:bg-white/10 transition-colors"
+                  >
+                    Mantener modo garzona
+                  </a>
+                </>
+              ) : (
+                <>
+                  <div className="flex items-start gap-3">
+                    <MapPin className="w-5 h-5 text-ocean-400 mt-0.5" />
+                    <div>
+                      <p className="text-ocean-200 text-sm">Pje. Lord Cochrane 049</p>
+                      <p className="text-ocean-300 text-xs">Mejillones, Chile</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <MessageCircle className="w-5 h-5 text-ocean-400" />
+                    <p className="text-ocean-200 text-sm">+56 9 3380 6302</p>
+                  </div>
+                  <a
+                    href={staffHref}
+                    className="inline-flex items-center justify-center rounded-full bg-white text-ocean-900 px-4 py-2 text-sm font-medium hover:bg-ocean-50 transition-colors"
+                  >
+                    Acceso garzona
+                  </a>
+                </>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Bottom Bar */}
         <div className="pt-8 border-t border-ocean-800">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-ocean-300 text-sm text-center md:text-left">
@@ -149,17 +172,6 @@ const Footer = () => {
               <span>Hecho con</span>
               <Heart className="w-4 h-4 text-coral-500 fill-current" />
               <span>en Mejillones, Chile</span>
-            </div>
-            <div className="flex gap-4">
-              {footerLinks.legal.map((link) => (
-                <a
-                  key={link.name}
-                  href={link.href}
-                  className="text-ocean-300 hover:text-white text-xs transition-colors"
-                >
-                  {link.name}
-                </a>
-              ))}
             </div>
           </div>
         </div>
