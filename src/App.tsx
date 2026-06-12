@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Toaster } from '@/components/ui/sonner';
 import { CartProvider } from '@/context/CartContext';
 import { MenuProvider } from '@/context/MenuContext';
@@ -12,13 +12,29 @@ import Footer from './sections/Footer';
 import CartDrawer from './sections/CartDrawer';
 import AdminPanel from './sections/AdminPanel';
 
+type ViewMode = 'customer' | 'staff';
+
 function App() {
+  const viewMode = useMemo<ViewMode>(() => {
+    if (typeof window === 'undefined') return 'customer';
+
+    const params = new URLSearchParams(window.location.search);
+    const mode = params.get('vista')?.toLowerCase();
+
+    if (mode === 'garzona' || mode === 'staff' || mode === 'operacion') {
+      return 'staff';
+    }
+
+    return 'customer';
+  }, []);
+
   useEffect(() => {
     document.title = 'Espacio Kihnally - Donde el Norte se siente';
   }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    if (viewMode !== 'staff') return;
     if (window.innerWidth >= 768) return;
     if (window.location.hash) return;
 
@@ -28,23 +44,31 @@ function App() {
     }, 150);
 
     return () => window.clearTimeout(timeoutId);
-  }, []);
+  }, [viewMode]);
 
   return (
     <MenuProvider>
       <CartProvider>
         <div className="min-h-screen bg-ocean-50/30">
-          <Navbar />
+          <Navbar mode={viewMode} />
           <main>
-            <Hero />
-            <Menu />
-            <About />
-            <Gallery />
-            <Contact />
+            <Hero mode={viewMode} />
+            <Menu mode={viewMode} />
+            {viewMode === 'customer' ? (
+              <>
+                <About />
+                <Gallery />
+                <Contact />
+              </>
+            ) : null}
           </main>
-          <Footer />
-          <CartDrawer />
-          <AdminPanel />
+          <Footer mode={viewMode} />
+          {viewMode === 'staff' ? (
+            <>
+              <CartDrawer />
+              <AdminPanel />
+            </>
+          ) : null}
           <Toaster position="top-center" richColors />
         </div>
       </CartProvider>
