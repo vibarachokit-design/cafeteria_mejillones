@@ -23,7 +23,6 @@ const Hero = ({ mode }: HeroProps) => {
   const waveRef3 = useRef<SVGPathElement>(null);
   const [isOpen, setIsOpen] = useState(false);
   const { totalItems, setIsCartOpen } = useCart();
-  const staffHref = `${import.meta.env.BASE_URL}?vista=garzona#menu`;
 
   useEffect(() => {
     const checkOpenStatus = () => {
@@ -94,9 +93,8 @@ const Hero = ({ mode }: HeroProps) => {
     eyebrow: 'Carta para explorar',
     slogan: 'Sabores del norte, sin apuro',
     description:
-      'Revisa todos nuestros productos, descubre favoritos de la casa y luego pide a la garzona lo que más te guste.',
+      'Revisa todos nuestros productos, descubre favoritos de la casa y elige con calma lo que vas a pedir.',
     primary: 'Explorar menú',
-    secondary: 'Acceso garzona',
   };
 
   const staffIntro = {
@@ -223,27 +221,20 @@ const Hero = ({ mode }: HeroProps) => {
               <ChevronDown className="w-5 h-5 group-hover:translate-y-1 transition-transform" />
             </a>
 
-            {mode === 'customer' ? (
-              <a
-                href={staffHref}
-                className="inline-flex items-center justify-center gap-2 px-6 sm:px-8 py-4 bg-white/10 backdrop-blur-md text-white rounded-full font-medium text-base sm:text-lg border border-white/30 hover:bg-white/20 transition-all duration-300"
-              >
-                <span>{intro.secondary}</span>
-              </a>
-            ) : (
+            {mode === 'staff' ? (
               <button
                 onClick={() => setIsCartOpen(true)}
                 className="inline-flex items-center justify-center gap-2 px-6 sm:px-8 py-4 bg-white/10 backdrop-blur-md text-white rounded-full font-medium text-base sm:text-lg border border-white/30 hover:bg-white/20 transition-all duration-300"
               >
                 <ShoppingCart className="w-5 h-5" />
-                <span>{intro.secondary}</span>
+                <span>{staffIntro.secondary}</span>
                 {totalItems > 0 ? (
                   <span className="ml-2 px-2 py-0.5 bg-coral-500 text-white text-sm font-bold rounded-full">
                     {totalItems}
                   </span>
                 ) : null}
               </button>
-            )}
+            ) : null}
           </div>
 
           {mode === 'customer' ? (
@@ -265,8 +256,8 @@ const Hero = ({ mode }: HeroProps) => {
               <div className="flex items-center gap-3 px-5 py-4 bg-white/10 backdrop-blur-md rounded-xl border border-white/20">
                 <Phone className="w-5 h-5 text-ocean-300" />
                 <div className="text-left">
-                  <p className="text-white/60 text-xs">Consulta</p>
-                  <p className="text-white font-medium">Pide a la garzona</p>
+                  <p className="text-white/60 text-xs">Atención</p>
+                  <p className="text-white font-medium">Elige y luego pide</p>
                 </div>
               </div>
             </div>

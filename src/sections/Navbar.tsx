@@ -12,7 +12,6 @@ const Navbar = ({ mode }: NavbarProps) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { totalItems, setIsCartOpen, selectedTable } = useCart();
-  const staffHref = `${import.meta.env.BASE_URL}?vista=garzona#menu`;
   const customerHref = `${import.meta.env.BASE_URL}#inicio`;
 
   useEffect(() => {
@@ -69,18 +68,7 @@ const Navbar = ({ mode }: NavbarProps) => {
               </a>
             ))}
 
-            {mode === 'customer' ? (
-              <a
-                href={staffHref}
-                className={`inline-flex items-center rounded-full px-4 py-2 text-sm font-medium transition-all duration-300 ${
-                  isScrolled
-                    ? 'bg-ocean-900 text-white hover:bg-ocean-800'
-                    : 'bg-white/15 text-white border border-white/25 hover:bg-white/25'
-                }`}
-              >
-                Acceso garzona
-              </a>
-            ) : (
+            {mode === 'staff' ? (
               <a
                 href={customerHref}
                 className={`inline-flex items-center rounded-full px-4 py-2 text-sm font-medium transition-all duration-300 ${
@@ -91,7 +79,7 @@ const Navbar = ({ mode }: NavbarProps) => {
               >
                 Ver versión cliente
               </a>
-            )}
+            ) : null}
           </div>
 
           <div className="flex items-center gap-3">
@@ -127,7 +115,8 @@ const Navbar = ({ mode }: NavbarProps) => {
                   </span>
                 ) : null}
               </button>
-            ) : (
+            ) : null}
+            {mode === 'customer' ? (
               <a
                 href="#menu"
                 className={`hidden sm:inline-flex items-center gap-2 px-4 py-2.5 rounded-full font-medium transition-all duration-300 ${
@@ -138,7 +127,7 @@ const Navbar = ({ mode }: NavbarProps) => {
               >
                 Ver carta
               </a>
-            )}
+            ) : null}
 
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -184,14 +173,7 @@ const Navbar = ({ mode }: NavbarProps) => {
                   </span>
                 ) : null}
               </button>
-            ) : (
-              <a
-                href={staffHref}
-                className="mt-3 flex items-center justify-center gap-2 w-full py-3 px-4 bg-ocean-500 text-white rounded-lg font-medium hover:bg-ocean-600 transition-colors duration-300"
-              >
-                Acceso garzona
-              </a>
-            )}
+            ) : null}
           </div>
         </div>
       </div>

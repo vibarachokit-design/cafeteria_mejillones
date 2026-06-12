@@ -151,12 +151,6 @@ const Footer = ({ mode }: FooterProps) => {
                     <MessageCircle className="w-5 h-5 text-ocean-400" />
                     <p className="text-ocean-200 text-sm">+56 9 3380 6302</p>
                   </div>
-                  <a
-                    href={staffHref}
-                    className="inline-flex items-center justify-center rounded-full bg-white text-ocean-900 px-4 py-2 text-sm font-medium hover:bg-ocean-50 transition-colors"
-                  >
-                    Acceso garzona
-                  </a>
                 </>
               )}
             </div>
