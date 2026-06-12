@@ -34,8 +34,6 @@ function App() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    if (viewMode !== 'staff') return;
-    if (window.innerWidth >= 768) return;
     if (window.location.hash) return;
 
     const timeoutId = window.setTimeout(() => {
