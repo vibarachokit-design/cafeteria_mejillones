@@ -50,7 +50,7 @@ function App() {
         <div className="min-h-screen bg-ocean-50/30">
           <Navbar mode={viewMode} />
           <main>
-            <Hero mode={viewMode} />
+            {viewMode === 'staff' ? <Hero mode={viewMode} /> : null}
             <Menu mode={viewMode} />
             {viewMode === 'customer' ? (
               <>
