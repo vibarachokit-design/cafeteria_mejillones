@@ -12,7 +12,8 @@ const Navbar = ({ mode }: NavbarProps) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { totalItems, setIsCartOpen, selectedTable } = useCart();
-  const customerHref = `${import.meta.env.BASE_URL}#inicio`;
+  const customerHref = `${import.meta.env.BASE_URL}#menu`;
+  const useSolidNavbar = mode === 'customer' || isScrolled;
 
   useEffect(() => {
     const handleScroll = () => {
@@ -30,20 +31,21 @@ const Navbar = ({ mode }: NavbarProps) => {
     { name: 'Contacto', href: '#contacto' },
   ];
 
-  const desktopNavLinks = mode === 'staff' ? navLinks.slice(0, 2) : navLinks;
-  const mobileNavLinks = mode === 'staff' ? navLinks.slice(0, 2) : navLinks.slice(0, 3);
+  const customerLinks = navLinks.filter((link) => link.href !== '#inicio');
+  const desktopNavLinks = mode === 'staff' ? navLinks.slice(0, 2) : customerLinks;
+  const mobileNavLinks = mode === 'staff' ? navLinks.slice(0, 2) : customerLinks.slice(0, 3);
 
   return (
     <nav
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
-        isScrolled
+        useSolidNavbar
           ? 'bg-white/95 backdrop-blur-xl shadow-ocean py-2'
           : 'bg-transparent py-4'
       }`}
     >
       <div className="section-padding max-w-7xl mx-auto">
         <div className="flex items-center justify-between">
-          <a href="#inicio" className="flex items-center gap-3 group">
+          <a href={mode === 'customer' ? '#menu' : '#inicio'} className="flex items-center gap-3 group">
             <img
               src={asset('logo-kihnally.png')}
               alt="Espacio Kihnally"
@@ -59,7 +61,7 @@ const Navbar = ({ mode }: NavbarProps) => {
                 key={link.name}
                 href={link.href}
                 className={`relative font-medium transition-colors duration-300 after:absolute after:bottom-0 after:left-0 after:w-0 after:h-0.5 after:bg-ocean-500 after:transition-all after:duration-300 hover:after:w-full ${
-                  isScrolled
+                  useSolidNavbar
                     ? 'text-ocean-800 hover:text-ocean-600'
                     : 'text-white/90 hover:text-white'
                 }`}
@@ -72,7 +74,7 @@ const Navbar = ({ mode }: NavbarProps) => {
               <a
                 href={customerHref}
                 className={`inline-flex items-center rounded-full px-4 py-2 text-sm font-medium transition-all duration-300 ${
-                  isScrolled
+                  useSolidNavbar
                     ? 'bg-sand-100 text-ocean-800 hover:bg-sand-200'
                     : 'bg-white/15 text-white border border-white/25 hover:bg-white/25'
                 }`}
@@ -86,7 +88,7 @@ const Navbar = ({ mode }: NavbarProps) => {
             {mode === 'staff' && selectedTable ? (
               <div
                 className={`hidden sm:flex items-center gap-2 px-3 py-2 rounded-full text-sm font-medium ${
-                  isScrolled
+                  useSolidNavbar
                     ? 'bg-sand-100 text-ocean-800'
                     : 'bg-white/15 text-white border border-white/25'
                 }`}
@@ -100,7 +102,7 @@ const Navbar = ({ mode }: NavbarProps) => {
               <button
                 onClick={() => setIsCartOpen(true)}
                 className={`relative flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-full font-medium transition-all duration-300 hover:scale-105 ${
-                  isScrolled
+                  useSolidNavbar
                     ? 'bg-ocean-500 text-white shadow-ocean hover:shadow-ocean-lg'
                     : 'bg-white/20 backdrop-blur-sm text-white border border-white/30 hover:bg-white/30'
                 }`}
@@ -120,7 +122,7 @@ const Navbar = ({ mode }: NavbarProps) => {
               <a
                 href="#menu"
                 className={`hidden sm:inline-flex items-center gap-2 px-4 py-2.5 rounded-full font-medium transition-all duration-300 ${
-                  isScrolled
+                  useSolidNavbar
                     ? 'bg-ocean-500 text-white shadow-ocean hover:shadow-ocean-lg'
                     : 'bg-white/20 backdrop-blur-sm text-white border border-white/30 hover:bg-white/30'
                 }`}
@@ -132,7 +134,7 @@ const Navbar = ({ mode }: NavbarProps) => {
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               className={`md:hidden p-2 rounded-lg transition-colors duration-300 ${
-                isScrolled ? 'text-ocean-800' : 'text-white'
+                useSolidNavbar ? 'text-ocean-800' : 'text-white'
               }`}
             >
               {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}

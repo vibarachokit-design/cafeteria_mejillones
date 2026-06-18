@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import {
+  ArrowLeft,
   Check,
   ClipboardList,
   Plus,
@@ -26,6 +27,7 @@ type MenuProps = {
 
 const Menu = ({ mode }: MenuProps) => {
   const [activeCategory, setActiveCategory] = useState('novedades');
+  const [staffShowingProducts, setStaffShowingProducts] = useState(false);
   const [addedItems, setAddedItems] = useState<number[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProduct, setSelectedProduct] = useState<MenuProduct | null>(null);
@@ -91,6 +93,18 @@ const Menu = ({ mode }: MenuProps) => {
     setTimeout(() => {
       setAddedItems((prev) => prev.filter((id) => id !== item.id));
     }, 2000);
+  };
+
+  const handleSelectCategory = (categoryId: string) => {
+    setActiveCategory(categoryId);
+
+    if (mode === 'staff') {
+      setStaffShowingProducts(true);
+    }
+  };
+
+  const handleBackToCategories = () => {
+    setStaffShowingProducts(false);
   };
 
   const ProductCard = ({
@@ -208,7 +222,7 @@ const Menu = ({ mode }: MenuProps) => {
             </h2>
             <p className="text-ocean-600 max-w-2xl mx-auto">
               {mode === 'staff'
-                ? 'Busca rápido, selecciona la mesa y agrega productos al pedido sin perder tiempo.'
+                ? 'Primero elige una categoría y luego agrega productos al pedido de la mesa.'
                 : 'Explora la carta completa, revisa categorías, fotos y precios.'}
             </p>
           </div>
@@ -286,34 +300,64 @@ const Menu = ({ mode }: MenuProps) => {
           {mode === 'staff' ? (
             <>
               <div className="sticky top-[184px] md:top-[84px] z-20 -mx-4 px-4 py-3 md:px-0 mb-8 md:mb-12 bg-white/95 md:bg-transparent backdrop-blur-xl md:backdrop-blur-0 border-y border-ocean-100 md:border-y-0">
-                <div className="mx-auto grid max-w-5xl grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2 md:gap-3 pb-1 md:pb-4">
-                  {menuCategories.map((category) => {
-                    const Icon = category.icon;
-                    const isActive = activeCategory === category.id;
+                {!staffShowingProducts ? (
+                  <div className="mx-auto max-w-5xl">
+                    <p className="mb-3 text-center text-xs font-medium uppercase tracking-[0.24em] text-ocean-500">
+                      Elige una categoría
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2 md:gap-3 pb-1 md:pb-4">
+                      {menuCategories.map((category) => {
+                        const Icon = category.icon;
+                        const isActive = activeCategory === category.id;
 
-                    return (
-                      <button
-                        key={category.id}
-                        onClick={() => setActiveCategory(category.id)}
-                        className={`w-full min-w-0 flex items-center justify-center gap-2 px-3 md:px-5 py-3 rounded-2xl font-medium transition-all duration-300 text-sm md:text-base text-center leading-tight ${
-                          isActive
-                            ? 'bg-ocean-500 text-white shadow-ocean scale-105'
-                            : 'bg-white text-ocean-700 hover:bg-ocean-50 border border-ocean-200'
-                        }`}
-                      >
-                        <Icon className="w-5 h-5" />
-                        <span className="break-words">{category.name}</span>
-                      </button>
-                    );
-                  })}
+                        return (
+                          <button
+                            key={category.id}
+                            onClick={() => handleSelectCategory(category.id)}
+                            className={`w-full min-w-0 flex items-center justify-center gap-2 px-3 md:px-5 py-3 rounded-2xl font-medium transition-all duration-300 text-sm md:text-base text-center leading-tight ${
+                              isActive
+                                ? 'bg-ocean-500 text-white shadow-ocean scale-105'
+                                : 'bg-white text-ocean-700 hover:bg-ocean-50 border border-ocean-200'
+                            }`}
+                          >
+                            <Icon className="w-5 h-5" />
+                            <span className="break-words">{category.name}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mx-auto flex max-w-5xl flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <button
+                      onClick={handleBackToCategories}
+                      className="inline-flex items-center justify-center gap-2 rounded-2xl border border-ocean-200 bg-white px-4 py-3 text-sm font-medium text-ocean-700 transition-colors hover:bg-ocean-50"
+                    >
+                      <ArrowLeft className="h-4 w-4" />
+                      <span>Volver a categorías</span>
+                    </button>
+
+                    <div className="rounded-2xl bg-ocean-900 px-5 py-3 text-white shadow-ocean">
+                      <p className="text-[11px] uppercase tracking-[0.24em] text-white/65">
+                        Categoría activa
+                      </p>
+                      <p className="font-display text-xl">{activeCategoryName}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {staffShowingProducts ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                  {filteredItems.map((item, index) => (
+                    <ProductCard key={item.id} item={item} index={index} />
+                  ))}
                 </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-                {filteredItems.map((item, index) => (
-                  <ProductCard key={item.id} item={item} index={index} />
-                ))}
-              </div>
+              ) : (
+                <div className="rounded-[32px] border border-dashed border-ocean-200 bg-white/80 p-8 text-center text-ocean-600 shadow-sm">
+                  Selecciona una categoría para ver los productos disponibles.
+                </div>
+              )}
             </>
           ) : (
             <div className="space-y-8">
@@ -506,3 +550,4 @@ const Menu = ({ mode }: MenuProps) => {
 };
 
 export default Menu;
+
