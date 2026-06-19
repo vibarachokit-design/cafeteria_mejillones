@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {
   ArrowLeft,
   Check,
@@ -31,6 +31,9 @@ const Menu = ({ mode }: MenuProps) => {
   const [addedItems, setAddedItems] = useState<number[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProduct, setSelectedProduct] = useState<MenuProduct | null>(null);
+  const [highlightCustomerCategory, setHighlightCustomerCategory] = useState(false);
+  const customerCategoriesRef = useRef<HTMLDivElement | null>(null);
+  const customerProductsRef = useRef<HTMLDivElement | null>(null);
   const {
     addItem,
     setIsCartOpen,
@@ -101,10 +104,35 @@ const Menu = ({ mode }: MenuProps) => {
     if (mode === 'staff') {
       setStaffShowingProducts(true);
     }
+
+    if (mode === 'customer') {
+      window.setTimeout(() => {
+        customerProductsRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start',
+        });
+      }, 120);
+    }
   };
 
   const handleBackToCategories = () => {
     setStaffShowingProducts(false);
+  };
+
+  const handleBackToCustomerCategories = () => {
+    setSelectedProduct(null);
+    setHighlightCustomerCategory(true);
+
+    window.setTimeout(() => {
+      customerCategoriesRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    }, 80);
+
+    window.setTimeout(() => {
+      setHighlightCustomerCategory(false);
+    }, 1800);
   };
 
   const ProductCard = ({
@@ -408,7 +436,7 @@ const Menu = ({ mode }: MenuProps) => {
               ) : null}
 
               <div className="grid grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)] gap-6 lg:gap-10 items-start">
-                <aside className="lg:sticky lg:top-[92px]">
+                <aside className="lg:sticky lg:top-[92px]" ref={customerCategoriesRef}>
                   <div className="rounded-3xl border border-ocean-100 bg-white shadow-sm p-4 md:p-5">
                     <p className="text-ocean-500 text-xs uppercase tracking-[0.24em] mb-3">
                       Categorías
@@ -424,7 +452,11 @@ const Menu = ({ mode }: MenuProps) => {
                             onClick={() => setActiveCategory(category.id)}
                             className={`w-full min-w-0 flex flex-col items-start justify-between gap-2 rounded-2xl px-4 py-3 text-left transition-all duration-300 lg:flex-row lg:items-center lg:gap-3 ${
                               isActive
-                                ? 'bg-ocean-500 text-white shadow-ocean'
+                                ? `bg-ocean-500 text-white shadow-ocean ${
+                                    highlightCustomerCategory
+                                      ? 'ring-4 ring-ocean-200 scale-[1.02]'
+                                      : ''
+                                  }`
                                 : 'bg-ocean-50/70 text-ocean-800 hover:bg-ocean-100'
                             }`}
                           >
@@ -448,7 +480,7 @@ const Menu = ({ mode }: MenuProps) => {
                   </div>
                 </aside>
 
-                <div>
+                <div ref={customerProductsRef}>
                   <div className="mb-6 rounded-3xl bg-ocean-900 text-white p-5 md:p-6 shadow-xl">
                     <p className="text-white/70 text-sm uppercase tracking-[0.24em] mb-2">
                       {activeCategoryName}
@@ -531,6 +563,14 @@ const Menu = ({ mode }: MenuProps) => {
                     {formatPrice(selectedProduct.price)}
                   </p>
                 </div>
+
+                <button
+                  onClick={handleBackToCustomerCategories}
+                  className="mb-4 inline-flex items-center justify-center gap-2 rounded-2xl border border-ocean-200 bg-white px-4 py-3 text-sm font-medium text-ocean-700 transition-colors hover:bg-ocean-50"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  <span>Volver a categorías</span>
+                </button>
 
                 <div className="mt-auto rounded-3xl border border-ocean-100 bg-white p-4">
                   <p className="text-sm font-semibold text-ocean-900 mb-1">
