@@ -1,4 +1,4 @@
-import type { MenuProduct } from '@/data/menuData';
+import { getFallbackImageForCategory, type MenuProduct } from '@/data/menuData';
 
 export interface RemoteMenuPayload {
   products: MenuProduct[];
@@ -12,6 +12,7 @@ interface RemoteMenuRow {
 }
 
 const MENU_ROW_ID = 'main';
+const MAX_INLINE_IMAGE_LENGTH = 120000;
 
 const getSupabaseConfig = () => {
   const url = import.meta.env.VITE_SUPABASE_URL?.trim();
@@ -41,11 +42,27 @@ const createHeaders = (includeBody = false) => {
   };
 };
 
+const sanitizeProductsForSync = (products: MenuProduct[]) =>
+  products.map((product) => {
+    if (
+      typeof product.image === 'string' &&
+      product.image.startsWith('data:image') &&
+      product.image.length > MAX_INLINE_IMAGE_LENGTH
+    ) {
+      return {
+        ...product,
+        image: getFallbackImageForCategory(product.category),
+      };
+    }
+
+    return product;
+  });
+
 const mapRowToPayload = (row?: RemoteMenuRow): RemoteMenuPayload | null => {
   if (!row || !Array.isArray(row.products)) return null;
 
   return {
-    products: row.products,
+    products: sanitizeProductsForSync(row.products),
     updatedAt: row.updated_at,
   };
 };
@@ -74,30 +91,28 @@ export async function fetchRemoteMenu() {
 }
 
 export async function saveRemoteMenu(products: MenuProduct[]) {
+  const sanitizedProducts = sanitizeProductsForSync(products);
   const config = getSupabaseConfig();
   if (!config) {
     return {
-      products,
+      products: sanitizedProducts,
       updatedAt: null,
     };
   }
 
-  const response = await fetch(
-    `${config.url}/rest/v1/shared_menu?on_conflict=id`,
-    {
-      method: 'POST',
-      headers: {
-        ...createHeaders(true),
-        Prefer: 'resolution=merge-duplicates,return=representation',
+  const response = await fetch(`${config.url}/rest/v1/shared_menu?on_conflict=id`, {
+    method: 'POST',
+    headers: {
+      ...createHeaders(true),
+      Prefer: 'resolution=merge-duplicates,return=representation',
+    },
+    body: JSON.stringify([
+      {
+        id: MENU_ROW_ID,
+        products: sanitizedProducts,
       },
-      body: JSON.stringify([
-        {
-          id: MENU_ROW_ID,
-          products,
-        },
-      ]),
-    }
-  );
+    ]),
+  });
 
   if (!response.ok) {
     const errorText = await response.text();
@@ -107,7 +122,7 @@ export async function saveRemoteMenu(products: MenuProduct[]) {
   const data = (await response.json()) as RemoteMenuRow[];
   return (
     mapRowToPayload(data[0]) ?? {
-      products,
+      products: sanitizedProducts,
       updatedAt: null,
     }
   );
