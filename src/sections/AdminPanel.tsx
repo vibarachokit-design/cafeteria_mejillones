@@ -147,11 +147,11 @@ const AdminPanel = () => {
   };
 
   const syncStatusLabel = {
-    disabled: 'SincronizaciÃ³n desactivada',
-    loading: 'Cargando menÃº compartido',
+    disabled: 'Sincronización desactivada',
+    loading: 'Cargando menú compartido',
     saving: 'Guardando cambios en Supabase',
-    synced: 'MenÃº sincronizado',
-    error: 'Error de sincronizaciÃ³n',
+    synced: 'Menú sincronizado',
+    error: 'Error de sincronización',
   }[syncStatus];
 
   const lastSyncLabel = lastSyncedAt
@@ -162,7 +162,7 @@ const AdminPanel = () => {
         hour: '2-digit',
         minute: '2-digit',
       })
-    : 'AÃºn no hay una sincronizaciÃ³n registrada';
+    : 'Aún no hay una sincronización registrada';
 
   const handleFieldChange = <K extends keyof MenuProduct>(
     key: K,
@@ -191,7 +191,7 @@ const AdminPanel = () => {
   const handleReset = () => {
     resetProducts();
     setSelectedProductId(products[0]?.id ?? 1);
-    toast.success('MenÃº restaurado a la versiÃ³n original');
+    toast.success('Menú restaurado a la versión original');
   };
 
   const handleUnlock = () => {
@@ -411,7 +411,7 @@ const AdminPanel = () => {
     link.download = `respaldo-menu-${todayKey}.json`;
     link.click();
     URL.revokeObjectURL(url);
-    toast.success('Respaldo del menÃº exportado');
+    toast.success('Respaldo del menú exportado');
   };
 
   const handleBackupImport = (file?: File) => {
@@ -424,14 +424,14 @@ const AdminPanel = () => {
         const importedProducts = Array.isArray(raw) ? raw : raw.products;
 
         if (!Array.isArray(importedProducts) || importedProducts.length === 0) {
-          throw new Error('Formato invÃ¡lido');
+          throw new Error('Formato inválido');
         }
 
         importProducts(importedProducts);
         setSelectedProductId(importedProducts[0]?.id ?? 0);
-        toast.success('Respaldo del menÃº importado');
+        toast.success('Respaldo del menú importado');
       } catch {
-        toast.error('No se pudo importar el respaldo del menÃº');
+        toast.error('No se pudo importar el respaldo del menú');
       }
     };
     reader.readAsText(file);
@@ -444,7 +444,7 @@ const AdminPanel = () => {
         className="fixed bottom-6 left-6 z-40 bg-ocean-900 text-white rounded-full px-4 py-3 shadow-ocean-lg hover:bg-ocean-800 transition-colors flex items-center gap-2"
       >
         <Settings2 className="w-4 h-4" />
-        <span className="text-sm font-medium">Admin menÃº</span>
+        <span className="text-sm font-medium">Admin menú</span>
       </button>
 
       {isOpen && (
@@ -468,7 +468,7 @@ const AdminPanel = () => {
                     Panel administrador
                   </h2>
                   <p className="text-ocean-600 mt-2">
-                    Ingresa la clave para editar productos, revisar ventas y respaldar el menÃº.
+                    Ingresa la clave para editar productos, revisar ventas y respaldar el menú.
                   </p>
                 </div>
                 <input
@@ -514,7 +514,7 @@ const AdminPanel = () => {
                     <div className="flex items-start justify-between gap-3">
                       <div className="space-y-1">
                         <p className="text-sm font-semibold text-ocean-900">
-                          MenÃº compartido con la garzona
+                          Menú compartido con la garzona
                         </p>
                         <p className="text-sm text-ocean-600">{syncStatusLabel}</p>
                         <p className="text-xs text-ocean-500">{lastSyncLabel}</p>
@@ -550,7 +550,7 @@ const AdminPanel = () => {
                     className="w-full py-3 border border-ocean-200 text-ocean-700 rounded-xl font-medium flex items-center justify-center gap-2 hover:bg-ocean-50 transition-colors"
                   >
                     <RotateCcw className="w-4 h-4" />
-                    <span>Restaurar menÃº original</span>
+                    <span>Restaurar menú original</span>
                   </button>
                   <button
                     onClick={() => handleExportSales('daily')}
@@ -578,7 +578,7 @@ const AdminPanel = () => {
                     className="w-full py-3 border border-ocean-200 text-ocean-700 rounded-xl font-medium flex items-center justify-center gap-2 hover:bg-ocean-50 transition-colors"
                   >
                     <Download className="w-4 h-4" />
-                    <span>Respaldar menÃº</span>
+                    <span>Respaldar menú</span>
                   </button>
                   <button
                     onClick={() => backupInputRef.current?.click()}
@@ -629,7 +629,7 @@ const AdminPanel = () => {
                     <div className="flex items-center gap-2">
                       <ChartNoAxesCombined className="w-5 h-5 text-ocean-600" />
                       <h3 className="font-display text-2xl font-semibold text-ocean-900">
-                        Reporte del dÃ­a
+                        Reporte del día
                       </h3>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -661,7 +661,7 @@ const AdminPanel = () => {
 
                     <div className="bg-white border border-ocean-100 rounded-3xl p-5">
                       <p className="font-semibold text-ocean-900 mb-4">
-                        Productos mÃ¡s vendidos hoy
+                        Productos más vendidos hoy
                       </p>
                       {todaySummary.topProducts.length > 0 ? (
                         <div className="space-y-3">
@@ -684,7 +684,7 @@ const AdminPanel = () => {
                         </div>
                       ) : (
                         <p className="text-sm text-ocean-500">
-                          AÃºn no hay ventas cerradas hoy en este dispositivo.
+                          Aún no hay ventas cerradas hoy en este dispositivo.
                         </p>
                       )}
                     </div>
@@ -777,7 +777,7 @@ const AdminPanel = () => {
                                 Subir foto del producto
                               </p>
                               <p className="text-sm text-ocean-600">
-                                Arrastra una imagen aquÃ­ o sÃºbela desde tu equipo.
+                                Arrastra una imagen aquí o súbela desde tu equipo.
                               </p>
                             </div>
                             <button
@@ -827,7 +827,7 @@ const AdminPanel = () => {
                         </div>
 
                         <label className="space-y-2 block">
-                          <span className="text-sm font-medium text-ocean-700">DescripciÃ³n</span>
+                          <span className="text-sm font-medium text-ocean-700">Descripción</span>
                           <textarea
                             value={selectedProduct.description}
                             onChange={(event) =>
@@ -840,7 +840,7 @@ const AdminPanel = () => {
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                           <label className="space-y-2">
-                            <span className="text-sm font-medium text-ocean-700">CategorÃ­a</span>
+                            <span className="text-sm font-medium text-ocean-700">Categoría</span>
                             <select
                               value={selectedProduct.category}
                               onChange={(event) =>
@@ -891,14 +891,14 @@ const AdminPanel = () => {
 
                         <div className="bg-ocean-50 rounded-2xl p-4 text-sm text-ocean-700">
                           {syncEnabled
-                            ? 'Los cambios del menÃº se guardan aquÃ­ y tambiÃ©n se reflejan en el celular que use el mismo Supabase.'
-                            : 'Los cambios del menÃº se guardan automÃ¡ticamente en este navegador.'}
+                            ? 'Los cambios del menú se guardan aquí y también se reflejan en el celular que use el mismo Supabase.'
+                            : 'Los cambios del menú se guardan automáticamente en este navegador.'}
                         </div>
 
                         <div className="bg-sand-100 rounded-2xl p-4 text-sm text-ocean-700">
-                          Usa â€œRespaldar menÃºâ€ para guardar una copia del menÃº editado y
-                          â€œImportar respaldoâ€ para restaurarlo despuÃ©s si cambias de navegador o
-                          borras cachÃ©.
+                          Usa "Respaldar menú" para guardar una copia del menú editado y
+                          "Importar respaldo" para restaurarlo después si cambias de navegador o
+                          borras caché.
                         </div>
                       </div>
                     ) : (
