@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+﻿import { useMemo, useRef, useState } from 'react';
 import {
   Settings2,
   X,
@@ -25,6 +25,8 @@ import { toast } from 'sonner';
 
 const ADMIN_SESSION_KEY = 'espacio-kihnally-admin-session';
 const ADMIN_PIN = import.meta.env.VITE_ADMIN_PIN ?? 'kihnally2026';
+const MAX_IMAGE_DIMENSION = 1280;
+const MAX_IMAGE_DATA_URL_LENGTH = 900000;
 const paymentMethodLabel = {
   debito: 'Debito',
   credito: 'Credito',
@@ -144,11 +146,11 @@ const AdminPanel = () => {
   };
 
   const syncStatusLabel = {
-    disabled: 'Sincronización desactivada',
-    loading: 'Cargando menú compartido',
+    disabled: 'SincronizaciÃ³n desactivada',
+    loading: 'Cargando menÃº compartido',
     saving: 'Guardando cambios en Supabase',
-    synced: 'Menú sincronizado',
-    error: 'Error de sincronización',
+    synced: 'MenÃº sincronizado',
+    error: 'Error de sincronizaciÃ³n',
   }[syncStatus];
 
   const lastSyncLabel = lastSyncedAt
@@ -159,7 +161,7 @@ const AdminPanel = () => {
         hour: '2-digit',
         minute: '2-digit',
       })
-    : 'Aún no hay una sincronización registrada';
+    : 'AÃºn no hay una sincronizaciÃ³n registrada';
 
   const handleFieldChange = <K extends keyof MenuProduct>(
     key: K,
@@ -188,7 +190,7 @@ const AdminPanel = () => {
   const handleReset = () => {
     resetProducts();
     setSelectedProductId(products[0]?.id ?? 1);
-    toast.success('Menú restaurado a la versión original');
+    toast.success('MenÃº restaurado a la versiÃ³n original');
   };
 
   const handleUnlock = () => {
@@ -211,23 +213,80 @@ const AdminPanel = () => {
     toast.success('Panel administrador bloqueado');
   };
 
-  const handleImageFile = (file?: File) => {
+  const optimizeImageFile = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+
+      reader.onload = () => {
+        if (typeof reader.result !== 'string') {
+          reject(new Error('No se pudo leer la imagen'));
+          return;
+        }
+
+        const image = new Image();
+        image.onload = () => {
+          const scale = Math.min(
+            1,
+            MAX_IMAGE_DIMENSION / Math.max(image.width, image.height)
+          );
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.max(1, Math.round(image.width * scale));
+          canvas.height = Math.max(1, Math.round(image.height * scale));
+
+          const context = canvas.getContext('2d');
+          if (!context) {
+            reject(new Error('No se pudo procesar la imagen'));
+            return;
+          }
+
+          context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+          let quality = 0.82;
+          let result = canvas.toDataURL('image/webp', quality);
+
+          while (result.length > MAX_IMAGE_DATA_URL_LENGTH && quality > 0.45) {
+            quality -= 0.08;
+            result = canvas.toDataURL('image/webp', quality);
+          }
+
+          if (result.length > MAX_IMAGE_DATA_URL_LENGTH) {
+            reject(
+              new Error(
+                'La imagen sigue siendo muy pesada. Prueba con una foto más liviana.'
+              )
+            );
+            return;
+          }
+
+          resolve(result);
+        };
+
+        image.onerror = () => reject(new Error('No se pudo cargar la imagen'));
+        image.src = reader.result;
+      };
+
+      reader.onerror = () => reject(new Error('No se pudo leer el archivo'));
+      reader.readAsDataURL(file);
+    });
+
+  const handleImageFile = async (file?: File) => {
     if (!file || !selectedProduct) return;
     if (!file.type.startsWith('image/')) {
       toast.error('Selecciona un archivo de imagen válido');
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result !== 'string') {
-        toast.error('No se pudo leer la imagen');
-        return;
-      }
-      handleFieldChange('image', reader.result);
+    try {
+      const optimizedImage = await optimizeImageFile(file);
+      handleFieldChange('image', optimizedImage);
       toast.success('Imagen actualizada');
-    };
-    reader.readAsDataURL(file);
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : 'No se pudo procesar la imagen'
+      );
+    }
   };
 
   const handleExportSales = (period: 'daily' | 'weekly' | 'monthly') => {
@@ -329,7 +388,7 @@ const AdminPanel = () => {
     link.download = `respaldo-menu-${todayKey}.json`;
     link.click();
     URL.revokeObjectURL(url);
-    toast.success('Respaldo del menú exportado');
+    toast.success('Respaldo del menÃº exportado');
   };
 
   const handleBackupImport = (file?: File) => {
@@ -342,14 +401,14 @@ const AdminPanel = () => {
         const importedProducts = Array.isArray(raw) ? raw : raw.products;
 
         if (!Array.isArray(importedProducts) || importedProducts.length === 0) {
-          throw new Error('Formato inválido');
+          throw new Error('Formato invÃ¡lido');
         }
 
         importProducts(importedProducts);
         setSelectedProductId(importedProducts[0]?.id ?? 0);
-        toast.success('Respaldo del menú importado');
+        toast.success('Respaldo del menÃº importado');
       } catch {
-        toast.error('No se pudo importar el respaldo del menú');
+        toast.error('No se pudo importar el respaldo del menÃº');
       }
     };
     reader.readAsText(file);
@@ -362,7 +421,7 @@ const AdminPanel = () => {
         className="fixed bottom-6 left-6 z-40 bg-ocean-900 text-white rounded-full px-4 py-3 shadow-ocean-lg hover:bg-ocean-800 transition-colors flex items-center gap-2"
       >
         <Settings2 className="w-4 h-4" />
-        <span className="text-sm font-medium">Admin menú</span>
+        <span className="text-sm font-medium">Admin menÃº</span>
       </button>
 
       {isOpen && (
@@ -386,7 +445,7 @@ const AdminPanel = () => {
                     Panel administrador
                   </h2>
                   <p className="text-ocean-600 mt-2">
-                    Ingresa la clave para editar productos, revisar ventas y respaldar el menú.
+                    Ingresa la clave para editar productos, revisar ventas y respaldar el menÃº.
                   </p>
                 </div>
                 <input
@@ -432,7 +491,7 @@ const AdminPanel = () => {
                     <div className="flex items-start justify-between gap-3">
                       <div className="space-y-1">
                         <p className="text-sm font-semibold text-ocean-900">
-                          Menú compartido con la garzona
+                          MenÃº compartido con la garzona
                         </p>
                         <p className="text-sm text-ocean-600">{syncStatusLabel}</p>
                         <p className="text-xs text-ocean-500">{lastSyncLabel}</p>
@@ -468,7 +527,7 @@ const AdminPanel = () => {
                     className="w-full py-3 border border-ocean-200 text-ocean-700 rounded-xl font-medium flex items-center justify-center gap-2 hover:bg-ocean-50 transition-colors"
                   >
                     <RotateCcw className="w-4 h-4" />
-                    <span>Restaurar menú original</span>
+                    <span>Restaurar menÃº original</span>
                   </button>
                   <button
                     onClick={() => handleExportSales('daily')}
@@ -496,7 +555,7 @@ const AdminPanel = () => {
                     className="w-full py-3 border border-ocean-200 text-ocean-700 rounded-xl font-medium flex items-center justify-center gap-2 hover:bg-ocean-50 transition-colors"
                   >
                     <Download className="w-4 h-4" />
-                    <span>Respaldar menú</span>
+                    <span>Respaldar menÃº</span>
                   </button>
                   <button
                     onClick={() => backupInputRef.current?.click()}
@@ -547,7 +606,7 @@ const AdminPanel = () => {
                     <div className="flex items-center gap-2">
                       <ChartNoAxesCombined className="w-5 h-5 text-ocean-600" />
                       <h3 className="font-display text-2xl font-semibold text-ocean-900">
-                        Reporte del día
+                        Reporte del dÃ­a
                       </h3>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -579,7 +638,7 @@ const AdminPanel = () => {
 
                     <div className="bg-white border border-ocean-100 rounded-3xl p-5">
                       <p className="font-semibold text-ocean-900 mb-4">
-                        Productos más vendidos hoy
+                        Productos mÃ¡s vendidos hoy
                       </p>
                       {todaySummary.topProducts.length > 0 ? (
                         <div className="space-y-3">
@@ -602,7 +661,7 @@ const AdminPanel = () => {
                         </div>
                       ) : (
                         <p className="text-sm text-ocean-500">
-                          Aún no hay ventas cerradas hoy en este dispositivo.
+                          AÃºn no hay ventas cerradas hoy en este dispositivo.
                         </p>
                       )}
                     </div>
@@ -695,7 +754,7 @@ const AdminPanel = () => {
                                 Subir foto del producto
                               </p>
                               <p className="text-sm text-ocean-600">
-                                Arrastra una imagen aquí o súbela desde tu equipo.
+                                Arrastra una imagen aquÃ­ o sÃºbela desde tu equipo.
                               </p>
                             </div>
                             <button
@@ -745,7 +804,7 @@ const AdminPanel = () => {
                         </div>
 
                         <label className="space-y-2 block">
-                          <span className="text-sm font-medium text-ocean-700">Descripción</span>
+                          <span className="text-sm font-medium text-ocean-700">DescripciÃ³n</span>
                           <textarea
                             value={selectedProduct.description}
                             onChange={(event) =>
@@ -758,7 +817,7 @@ const AdminPanel = () => {
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                           <label className="space-y-2">
-                            <span className="text-sm font-medium text-ocean-700">Categoría</span>
+                            <span className="text-sm font-medium text-ocean-700">CategorÃ­a</span>
                             <select
                               value={selectedProduct.category}
                               onChange={(event) =>
@@ -809,14 +868,14 @@ const AdminPanel = () => {
 
                         <div className="bg-ocean-50 rounded-2xl p-4 text-sm text-ocean-700">
                           {syncEnabled
-                            ? 'Los cambios del menú se guardan aquí y también se reflejan en el celular que use el mismo Supabase.'
-                            : 'Los cambios del menú se guardan automáticamente en este navegador.'}
+                            ? 'Los cambios del menÃº se guardan aquÃ­ y tambiÃ©n se reflejan en el celular que use el mismo Supabase.'
+                            : 'Los cambios del menÃº se guardan automÃ¡ticamente en este navegador.'}
                         </div>
 
                         <div className="bg-sand-100 rounded-2xl p-4 text-sm text-ocean-700">
-                          Usa “Respaldar menú” para guardar una copia del menú editado y
-                          “Importar respaldo” para restaurarlo después si cambias de navegador o
-                          borras caché.
+                          Usa â€œRespaldar menÃºâ€ para guardar una copia del menÃº editado y
+                          â€œImportar respaldoâ€ para restaurarlo despuÃ©s si cambias de navegador o
+                          borras cachÃ©.
                         </div>
                       </div>
                     ) : (
