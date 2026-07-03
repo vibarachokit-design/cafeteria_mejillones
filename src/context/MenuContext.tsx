@@ -52,11 +52,24 @@ const loadInitialProducts = () => {
 
 const persistLocalProducts = (nextProducts: MenuProduct[]) => {
   if (typeof window === 'undefined') return;
+
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextProducts));
   } catch (error) {
     console.warn('No se pudo guardar el menú completo en localStorage.', error);
   }
+};
+
+const getFriendlySyncError = (error: unknown) => {
+  if (!(error instanceof Error)) {
+    return 'No se pudo sincronizar el menú con Supabase.';
+  }
+
+  if (error.message.includes('"code":"57014"')) {
+    return 'Supabase tardó demasiado en responder. Reintenta la sincronización; si persiste, reemplaza imágenes antiguas muy pesadas.';
+  }
+
+  return error.message || 'No se pudo sincronizar el menú con Supabase.';
 };
 
 export function MenuProvider({ children }: { children: React.ReactNode }) {
@@ -128,11 +141,7 @@ export function MenuProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       hasFinishedInitialSyncRef.current = true;
       setSyncStatus('error');
-      setSyncError(
-        error instanceof Error
-          ? error.message
-          : 'No se pudo sincronizar el menú con Supabase.'
-      );
+      setSyncError(getFriendlySyncError(error));
     }
   }, [applyRemotePayload, syncEnabled]);
 
@@ -158,11 +167,7 @@ export function MenuProvider({ children }: { children: React.ReactNode }) {
         setSyncError('');
       } catch (error) {
         setSyncStatus('error');
-        setSyncError(
-          error instanceof Error
-            ? error.message
-            : 'No se pudieron guardar los cambios del menú en Supabase.'
-        );
+        setSyncError(getFriendlySyncError(error));
       }
     }, 700);
 
