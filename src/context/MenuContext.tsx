@@ -52,7 +52,11 @@ const loadInitialProducts = () => {
 
 const persistLocalProducts = (nextProducts: MenuProduct[]) => {
   if (typeof window === 'undefined') return;
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextProducts));
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextProducts));
+  } catch (error) {
+    console.warn('No se pudo guardar el menú completo en localStorage.', error);
+  }
 };
 
 export function MenuProvider({ children }: { children: React.ReactNode }) {
