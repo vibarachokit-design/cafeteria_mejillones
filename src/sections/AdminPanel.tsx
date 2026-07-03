@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useMenu } from '@/context/MenuContext';
 import { useCart } from '@/context/CartContext';
+import { isMenuStorageEnabled, uploadMenuImage } from '@/lib/menuStorage';
 import {
   availableProductImages,
   asset,
@@ -214,7 +215,7 @@ const AdminPanel = () => {
   };
 
   const optimizeImageFile = (file: File) =>
-    new Promise<string>((resolve, reject) => {
+    new Promise<{ blob: Blob; previewUrl: string }>((resolve, reject) => {
       const reader = new FileReader();
 
       reader.onload = () => {
@@ -258,7 +259,21 @@ const AdminPanel = () => {
             return;
           }
 
-          resolve(result);
+          canvas.toBlob(
+            (blob) => {
+              if (!blob) {
+                reject(new Error('No se pudo preparar la imagen'));
+                return;
+              }
+
+              resolve({
+                blob,
+                previewUrl: result,
+              });
+            },
+            'image/webp',
+            quality
+          );
         };
 
         image.onerror = () => reject(new Error('No se pudo cargar la imagen'));
@@ -278,7 +293,15 @@ const AdminPanel = () => {
 
     try {
       const optimizedImage = await optimizeImageFile(file);
-      handleFieldChange('image', optimizedImage);
+
+      if (syncEnabled && isMenuStorageEnabled()) {
+        const uploadedUrl = await uploadMenuImage(optimizedImage.blob, selectedProduct.name);
+        handleFieldChange('image', uploadedUrl);
+        toast.success('Imagen subida y sincronizada');
+        return;
+      }
+
+      handleFieldChange('image', optimizedImage.previewUrl);
       toast.success('Imagen actualizada');
     } catch (error) {
       toast.error(
