@@ -449,7 +449,7 @@ const Menu = ({ mode }: MenuProps) => {
                         return (
                           <button
                             key={category.id}
-                            onClick={() => setActiveCategory(category.id)}
+                            onClick={() => handleSelectCategory(category.id)}
                             className={`w-full min-w-0 flex flex-col items-start justify-between gap-2 rounded-2xl px-4 py-3 text-left transition-all duration-300 lg:flex-row lg:items-center lg:gap-3 ${
                               isActive
                                 ? `bg-ocean-500 text-white shadow-ocean ${
