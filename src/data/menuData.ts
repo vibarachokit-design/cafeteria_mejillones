@@ -57,8 +57,11 @@ const fallbackImageByCategory: Record<string, string> = {
   boutique: asset('bahia.jpg'),
 };
 
+export const getFallbackImageForCategory = (category: string) =>
+  fallbackImageByCategory[category] || asset('cafe-latte.jpg');
+
 const remoteOrFallback = (image: string | null, category: string) =>
-  image || fallbackImageByCategory[category] || asset('cafe-latte.jpg');
+  image || getFallbackImageForCategory(category);
 
 export const defaultMenuProducts: MenuProduct[] = [
   {
