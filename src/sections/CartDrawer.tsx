@@ -338,6 +338,60 @@ const CartDrawer = () => {
     );
   };
 
+  const handlePrintCurrentOrderTicket = () => {
+    if (!selectedTable) {
+      toast.error('Selecciona la mesa antes de imprimir el pedido');
+      return;
+    }
+
+    if (items.length === 0) {
+      toast.error('No hay productos nuevos para imprimir');
+      return;
+    }
+
+    printPartialTicket({
+      tableId: selectedTable,
+      tableItems: items,
+      sentAt: new Date().toISOString(),
+    });
+  };
+
+  const handlePrintFinalTicketPreview = () => {
+    if (!selectedTable) {
+      toast.error('Selecciona una mesa para imprimir la cuenta');
+      return;
+    }
+
+    if (currentTableItems.length === 0) {
+      toast.error('No hay productos acumulados para imprimir esta cuenta');
+      return;
+    }
+
+    const openedAt = activeOpenTable?.openedAt ?? new Date().toISOString();
+    const closedAt = new Date().toISOString();
+    const subtotal = currentTableTotal;
+    const tipAmount = includeTip ? suggestedTip : 0;
+    const total = subtotal + tipAmount;
+    const elapsedMinutes = Math.max(
+      0,
+      Math.round(
+        (new Date(closedAt).getTime() - new Date(openedAt).getTime()) / 60000
+      )
+    );
+
+    printFinalTicket({
+      tableId: selectedTable,
+      tableItems: currentTableItems,
+      openedAt,
+      closedAt,
+      subtotal,
+      tipAmount,
+      total,
+      paymentMethod: selectedPaymentMethod,
+      elapsedMinutes,
+    });
+  };
+
   const openWhatsApp = (message: string) => {
     const encodedMessage = encodeURIComponent(message);
     const whatsappUrl = `https://api.whatsapp.com/send?phone=56933806302&text=${encodedMessage}`;
@@ -359,11 +413,6 @@ const CartDrawer = () => {
     openWhatsApp(
       buildOrderMessage(selectedTable, items, sentAt, 'Pedido Espacio Kihnally')
     );
-    printPartialTicket({
-      tableId: selectedTable,
-      tableItems: items,
-      sentAt,
-    });
     await submitCurrentOrder();
     toast.success('Pedido enviado. La mesa quedó abierta para seguir agregando productos.');
   };
@@ -405,17 +454,6 @@ const CartDrawer = () => {
         elapsedMinutes: result.elapsedMinutes,
       })
     );
-    printFinalTicket({
-      tableId: result.tableId,
-      tableItems: result.items,
-      openedAt: result.openedAt,
-      closedAt: result.closedAt,
-      subtotal: result.subtotal,
-      tipAmount: result.tipAmount,
-      total: result.total,
-      paymentMethod: result.paymentMethod,
-      elapsedMinutes: result.elapsedMinutes,
-    });
 
     setIsPaymentModalOpen(false);
     setCloseStep('payment');
@@ -657,6 +695,12 @@ const CartDrawer = () => {
               <span>Enviar pedido y dejar mesa abierta</span>
             </button>
             <button
+              onClick={handlePrintCurrentOrderTicket}
+              className="w-full py-3 border-2 border-ocean-200 text-ocean-700 rounded-xl font-medium hover:bg-ocean-50 transition-colors"
+            >
+              Imprimir ticket del pedido
+            </button>
+            <button
               onClick={handleStartCloseTable}
               className="w-full py-4 bg-ocean-900 text-white rounded-xl font-medium flex items-center justify-center gap-2 hover:bg-ocean-800 transition-colors text-sm md:text-base"
             >
@@ -812,6 +856,12 @@ const CartDrawer = () => {
             </div>
 
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+              <button
+                onClick={handlePrintFinalTicketPreview}
+                className="flex-1 rounded-xl border border-ocean-200 px-4 py-3 font-medium text-ocean-700 hover:bg-ocean-50 transition-colors"
+              >
+                Imprimir ticket
+              </button>
               <button
                 onClick={() => setCloseStep('payment')}
                 className="flex-1 rounded-xl border border-ocean-200 px-4 py-3 font-medium text-ocean-700 hover:bg-ocean-50 transition-colors"
