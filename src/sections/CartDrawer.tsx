@@ -47,6 +47,26 @@ const paymentOptions: Array<{
   },
 ];
 
+const businessLabel = 'Espacio Kihnally';
+const printStyles = `
+  <style>
+    body { margin: 0; padding: 16px; font-family: Arial, Helvetica, sans-serif; color: #0f172a; background: #fff; }
+    .ticket { max-width: 320px; margin: 0 auto; border: 1px solid #cbd5e1; border-radius: 12px; padding: 16px; }
+    .center { text-align: center; }
+    .muted { color: #475569; }
+    .row { display: flex; justify-content: space-between; gap: 12px; margin: 6px 0; }
+    .divider { border-top: 1px dashed #94a3b8; margin: 12px 0; }
+    .item { display: flex; justify-content: space-between; gap: 12px; margin: 8px 0; align-items: flex-start; }
+    .item-name { flex: 1; font-size: 14px; line-height: 1.35; }
+    .item-price { white-space: nowrap; font-size: 14px; }
+    .total { font-size: 18px; font-weight: 700; }
+    h1, h2, p { margin: 0; }
+    h1 { font-size: 20px; margin-bottom: 4px; }
+    h2 { font-size: 14px; margin-bottom: 12px; }
+    @media print { body { padding: 0; } .ticket { border: 0; border-radius: 0; } }
+  </style>
+`;
+
 const CartDrawer = () => {
   const {
     items,
@@ -103,6 +123,57 @@ const CartDrawer = () => {
 
   const suggestedTip = Math.round(currentTableTotal * 0.1);
   const totalWithTip = currentTableTotal + suggestedTip;
+
+  const escapeHtml = (value: string) =>
+    value
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#39;');
+
+  const openPrintWindow = (title: string, bodyHtml: string) => {
+    const printWindow = window.open('', '_blank', 'noopener,noreferrer,width=420,height=720');
+
+    if (!printWindow) {
+      toast.error('No se pudo abrir la impresión. Revisa si el navegador bloqueó la ventana.');
+      return;
+    }
+
+    printWindow.document.write(`
+      <html lang="es">
+        <head>
+          <meta charset="utf-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
+          <title>${escapeHtml(title)}</title>
+          ${printStyles}
+        </head>
+        <body>
+          ${bodyHtml}
+          <script>
+            window.onload = () => {
+              setTimeout(() => window.print(), 300);
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
+  const buildItemsHtml = (tableItems: CartItem[]) =>
+    tableItems
+      .map(
+        (item) => `
+          <div class="item">
+            <div class="item-name">${escapeHtml(item.name)} x${item.quantity}</div>
+            <div class="item-price">${escapeHtml(
+              formatPrice(item.price * item.quantity)
+            )}</div>
+          </div>
+        `
+      )
+      .join('');
 
   const buildOrderMessage = (
     tableId: string,
@@ -172,6 +243,101 @@ const CartDrawer = () => {
     return message;
   };
 
+  const printPartialTicket = ({
+    tableId,
+    tableItems,
+    sentAt,
+  }: {
+    tableId: string;
+    tableItems: CartItem[];
+    sentAt: string;
+  }) => {
+    const total = tableItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+    openPrintWindow(
+      `Pedido Mesa ${tableId}`,
+      `
+        <section class="ticket">
+          <div class="center">
+            <h1>${businessLabel}</h1>
+            <h2>Pedido parcial</h2>
+          </div>
+          <div class="row"><span>Mesa</span><strong>${escapeHtml(tableId)}</strong></div>
+          <div class="row"><span>Fecha</span><span>${escapeHtml(formatDateTime(sentAt))}</span></div>
+          <div class="divider"></div>
+          ${buildItemsHtml(tableItems)}
+          <div class="divider"></div>
+          <div class="row total"><span>Total pedido</span><span>${escapeHtml(
+            formatPrice(total)
+          )}</span></div>
+          <div class="divider"></div>
+          <p class="center muted">Ticket generado desde la garzona</p>
+        </section>
+      `
+    );
+  };
+
+  const printFinalTicket = ({
+    tableId,
+    tableItems,
+    openedAt,
+    closedAt,
+    subtotal,
+    tipAmount,
+    total,
+    paymentMethod,
+    elapsedMinutes,
+  }: {
+    tableId: string;
+    tableItems: CartItem[];
+    openedAt: string;
+    closedAt: string;
+    subtotal: number;
+    tipAmount: number;
+    total: number;
+    paymentMethod: PaymentMethod;
+    elapsedMinutes: number;
+  }) => {
+    openPrintWindow(
+      `Cuenta Mesa ${tableId}`,
+      `
+        <section class="ticket">
+          <div class="center">
+            <h1>${businessLabel}</h1>
+            <h2>Cuenta final</h2>
+          </div>
+          <div class="row"><span>Mesa</span><strong>${escapeHtml(tableId)}</strong></div>
+          <div class="row"><span>Apertura</span><span>${escapeHtml(
+            formatDateTime(openedAt)
+          )}</span></div>
+          <div class="row"><span>Cierre</span><span>${escapeHtml(
+            formatDateTime(closedAt)
+          )}</span></div>
+          <div class="row"><span>Atención</span><span>${escapeHtml(
+            formatElapsedMinutes(elapsedMinutes)
+          )}</span></div>
+          <div class="row"><span>Pago</span><span>${escapeHtml(
+            paymentMethodLabel(paymentMethod)
+          )}</span></div>
+          <div class="divider"></div>
+          ${buildItemsHtml(tableItems)}
+          <div class="divider"></div>
+          <div class="row"><span>Subtotal</span><span>${escapeHtml(
+            formatPrice(subtotal)
+          )}</span></div>
+          <div class="row"><span>Propina</span><span>${escapeHtml(
+            tipAmount > 0 ? formatPrice(tipAmount) : 'No incluida'
+          )}</span></div>
+          <div class="row total"><span>Total</span><span>${escapeHtml(
+            formatPrice(total)
+          )}</span></div>
+          <div class="divider"></div>
+          <p class="center muted">Gracias por su visita</p>
+        </section>
+      `
+    );
+  };
+
   const openWhatsApp = (message: string) => {
     const encodedMessage = encodeURIComponent(message);
     const whatsappUrl = `https://api.whatsapp.com/send?phone=56933806302&text=${encodedMessage}`;
@@ -193,6 +359,11 @@ const CartDrawer = () => {
     openWhatsApp(
       buildOrderMessage(selectedTable, items, sentAt, 'Pedido Espacio Kihnally')
     );
+    printPartialTicket({
+      tableId: selectedTable,
+      tableItems: items,
+      sentAt,
+    });
     await submitCurrentOrder();
     toast.success('Pedido enviado. La mesa quedó abierta para seguir agregando productos.');
   };
@@ -234,6 +405,17 @@ const CartDrawer = () => {
         elapsedMinutes: result.elapsedMinutes,
       })
     );
+    printFinalTicket({
+      tableId: result.tableId,
+      tableItems: result.items,
+      openedAt: result.openedAt,
+      closedAt: result.closedAt,
+      subtotal: result.subtotal,
+      tipAmount: result.tipAmount,
+      total: result.total,
+      paymentMethod: result.paymentMethod,
+      elapsedMinutes: result.elapsedMinutes,
+    });
 
     setIsPaymentModalOpen(false);
     setCloseStep('payment');
