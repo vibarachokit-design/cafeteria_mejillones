@@ -133,14 +133,26 @@ const CartDrawer = () => {
       .replaceAll("'", '&#39;');
 
   const openPrintWindow = (title: string, bodyHtml: string) => {
-    const printWindow = window.open('', '_blank', 'noopener,noreferrer,width=420,height=720');
+    const frame = document.createElement('iframe');
+    frame.setAttribute('aria-hidden', 'true');
+    frame.style.position = 'fixed';
+    frame.style.right = '0';
+    frame.style.bottom = '0';
+    frame.style.width = '0';
+    frame.style.height = '0';
+    frame.style.border = '0';
+    frame.style.opacity = '0';
+    document.body.appendChild(frame);
 
-    if (!printWindow) {
-      toast.error('No se pudo abrir la impresión. Revisa si el navegador bloqueó la ventana.');
+    const printDocument = frame.contentWindow?.document;
+    if (!printDocument || !frame.contentWindow) {
+      frame.remove();
+      toast.error('No se pudo abrir la impresi?n en este navegador.');
       return;
     }
 
-    printWindow.document.write(`
+    printDocument.open();
+    printDocument.write(`
       <html lang="es">
         <head>
           <meta charset="utf-8" />
@@ -150,15 +162,19 @@ const CartDrawer = () => {
         </head>
         <body>
           ${bodyHtml}
-          <script>
-            window.onload = () => {
-              setTimeout(() => window.print(), 300);
-            };
-          </script>
         </body>
       </html>
     `);
-    printWindow.document.close();
+    printDocument.close();
+
+    window.setTimeout(() => {
+      frame.contentWindow?.focus();
+      frame.contentWindow?.print();
+
+      window.setTimeout(() => {
+        frame.remove();
+      }, 1500);
+    }, 350);
   };
 
   const buildItemsHtml = (tableItems: CartItem[]) =>
