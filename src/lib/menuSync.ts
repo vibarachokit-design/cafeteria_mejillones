@@ -1,4 +1,5 @@
 import { getFallbackImageForCategory, type MenuProduct } from '@/data/menuData';
+import { getSupabaseConfig, getSupabaseConfigError } from '@/lib/supabaseConfig';
 
 export interface RemoteMenuPayload {
   products: MenuProduct[];
@@ -14,24 +15,10 @@ interface RemoteMenuRow {
 const MENU_ROW_ID = 'main';
 const MAX_INLINE_IMAGE_LENGTH = 120000;
 
-const getSupabaseConfig = () => {
-  const url = import.meta.env.VITE_SUPABASE_URL?.trim();
-  const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim();
-
-  if (!url || !anonKey) return null;
-
-  return {
-    url: url.replace(/\/$/, ''),
-    anonKey,
-  };
-};
-
 const createHeaders = (includeBody = false) => {
   const config = getSupabaseConfig();
   if (!config) {
-    throw new Error(
-      'Faltan VITE_SUPABASE_URL o VITE_SUPABASE_ANON_KEY en la configuración.'
-    );
+    throw new Error(getSupabaseConfigError() ?? 'No se pudo leer la configuracion de Supabase.');
   }
 
   return {

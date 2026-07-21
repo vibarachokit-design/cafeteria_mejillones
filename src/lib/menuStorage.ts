@@ -1,26 +1,26 @@
+import { getSupabaseConfig, getSupabaseConfigError } from '@/lib/supabaseConfig';
+
 const DEFAULT_MENU_BUCKET = 'menu-images';
 
-const getSupabaseConfig = () => {
-  const url = import.meta.env.VITE_SUPABASE_URL?.trim();
-  const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim();
-  const bucket =
-    import.meta.env.VITE_SUPABASE_MENU_BUCKET?.trim() || DEFAULT_MENU_BUCKET;
-
-  if (!url || !anonKey) return null;
+const getStorageConfig = () => {
+  const config = getSupabaseConfig();
+  if (!config) return null;
 
   return {
-    url: url.replace(/\/$/, ''),
-    anonKey,
-    bucket,
+    ...config,
+    bucket:
+      import.meta.env.VITE_SUPABASE_MENU_BUCKET?.trim() || DEFAULT_MENU_BUCKET,
   };
 };
 
-export const isMenuStorageEnabled = () => Boolean(getSupabaseConfig());
+export const isMenuStorageEnabled = () => Boolean(getStorageConfig());
 
 export async function uploadMenuImage(file: Blob, fileName: string) {
-  const config = getSupabaseConfig();
+  const config = getStorageConfig();
   if (!config) {
-    throw new Error('Faltan los datos de Supabase para subir imágenes.');
+    throw new Error(
+      getSupabaseConfigError() ?? 'Faltan los datos de Supabase para subir imagenes.'
+    );
   }
 
   const extension = file.type === 'image/webp' ? 'webp' : 'jpg';
@@ -49,7 +49,7 @@ export async function uploadMenuImage(file: Blob, fileName: string) {
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(errorText || 'Supabase no respondió al subir la imagen.');
+    throw new Error(errorText || 'Supabase no respondio al subir la imagen.');
   }
 
   return `${config.url}/storage/v1/object/public/${config.bucket}/${objectPath}`;

@@ -3,6 +3,7 @@ import type {
   PaymentMethod,
   SaleRecord,
 } from '@/context/CartContext';
+import { getSupabaseConfig, getSupabaseConfigError } from '@/lib/supabaseConfig';
 
 interface OpenTableRow {
   table_id: string;
@@ -24,24 +25,10 @@ interface SaleRecordRow {
   items: SaleRecord['items'];
 }
 
-const getSupabaseConfig = () => {
-  const url = import.meta.env.VITE_SUPABASE_URL?.trim();
-  const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim();
-
-  if (!url || !anonKey) return null;
-
-  return {
-    url: url.replace(/\/$/, ''),
-    anonKey,
-  };
-};
-
 const createHeaders = (includeBody = false) => {
   const config = getSupabaseConfig();
   if (!config) {
-    throw new Error(
-      'Faltan VITE_SUPABASE_URL o VITE_SUPABASE_ANON_KEY en la configuración.'
-    );
+    throw new Error(getSupabaseConfigError() ?? 'No se pudo leer la configuracion de Supabase.');
   }
 
   return {

@@ -50,19 +50,22 @@ const paymentOptions: Array<{
 const businessLabel = 'Espacio Kihnally';
 const printStyles = `
   <style>
-    body { margin: 0; padding: 16px; font-family: Arial, Helvetica, sans-serif; color: #0f172a; background: #fff; }
-    .ticket { max-width: 320px; margin: 0 auto; border: 1px solid #cbd5e1; border-radius: 12px; padding: 16px; }
+    body { margin: 0; padding: 12px; font-family: Arial, Helvetica, sans-serif; color: #000; background: #fff; }
+    .ticket { max-width: 320px; margin: 0 auto; border: 1px solid #000; border-radius: 0; padding: 14px; }
     .center { text-align: center; }
-    .muted { color: #475569; }
+    .muted { color: #000; }
     .row { display: flex; justify-content: space-between; gap: 12px; margin: 6px 0; }
-    .divider { border-top: 1px dashed #94a3b8; margin: 12px 0; }
-    .item { display: flex; justify-content: space-between; gap: 12px; margin: 8px 0; align-items: flex-start; }
-    .item-name { flex: 1; font-size: 14px; line-height: 1.35; }
-    .item-price { white-space: nowrap; font-size: 14px; }
+    .divider { border-top: 1px dashed #000; margin: 10px 0; }
+    .item { margin: 10px 0; }
+    .item-top { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+    .item-name { flex: 1; font-size: 14px; line-height: 1.35; font-weight: 700; }
+    .item-meta { margin-top: 2px; font-size: 12px; color: #000; }
+    .item-price { white-space: nowrap; font-size: 14px; font-weight: 700; }
     .total { font-size: 18px; font-weight: 700; }
+    .service-note { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
     h1, h2, p { margin: 0; }
     h1 { font-size: 20px; margin-bottom: 4px; }
-    h2 { font-size: 14px; margin-bottom: 12px; }
+    h2 { font-size: 14px; margin-bottom: 8px; color: #000; }
     @media print { body { padding: 0; } .ticket { border: 0; border-radius: 0; } }
   </style>
 `;
@@ -182,10 +185,15 @@ const CartDrawer = () => {
       .map(
         (item) => `
           <div class="item">
-            <div class="item-name">${escapeHtml(item.name)} x${item.quantity}</div>
-            <div class="item-price">${escapeHtml(
-              formatPrice(item.price * item.quantity)
-            )}</div>
+            <div class="item-top">
+              <div class="item-name">${escapeHtml(item.name)}</div>
+              <div class="item-price">${escapeHtml(
+                formatPrice(item.price * item.quantity)
+              )}</div>
+            </div>
+            <div class="item-meta">
+              Cantidad: ${item.quantity} | Unitario: ${escapeHtml(formatPrice(item.price))}
+            </div>
           </div>
         `
       )
@@ -276,7 +284,8 @@ const CartDrawer = () => {
         <section class="ticket">
           <div class="center">
             <h1>${businessLabel}</h1>
-            <h2>Pedido parcial</h2>
+            <h2>Orden de servicio</h2>
+            <p class="service-note">Preparacion cocina / barra</p>
           </div>
           <div class="row"><span>Mesa</span><strong>${escapeHtml(tableId)}</strong></div>
           <div class="row"><span>Fecha</span><span>${escapeHtml(formatDateTime(sentAt))}</span></div>
@@ -287,7 +296,7 @@ const CartDrawer = () => {
             formatPrice(total)
           )}</span></div>
           <div class="divider"></div>
-          <p class="center muted">Ticket generado desde la garzona</p>
+          <p class="center muted">Ticket generado desde garzona</p>
         </section>
       `
     );

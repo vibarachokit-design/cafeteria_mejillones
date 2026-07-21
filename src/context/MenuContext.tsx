@@ -62,14 +62,18 @@ const persistLocalProducts = (nextProducts: MenuProduct[]) => {
 
 const getFriendlySyncError = (error: unknown) => {
   if (!(error instanceof Error)) {
-    return 'No se pudo sincronizar el menú con Supabase.';
+    return 'No se pudo sincronizar el menu con Supabase.';
+  }
+
+  if (error.message.includes('Failed to fetch')) {
+    return 'No se pudo conectar con Supabase. Revisa internet y el secret VITE_SUPABASE_URL en GitHub; debe verse como https://tu-proyecto.supabase.co';
   }
 
   if (error.message.includes('"code":"57014"')) {
-    return 'Supabase tardó demasiado en responder. Reintenta la sincronización; si persiste, reemplaza imágenes antiguas muy pesadas.';
+    return 'Supabase tardo demasiado en responder. Reintenta la sincronizacion; si persiste, reemplaza imagenes antiguas muy pesadas.';
   }
 
-  return error.message || 'No se pudo sincronizar el menú con Supabase.';
+  return error.message || 'No se pudo sincronizar el menu con Supabase.';
 };
 
 export function MenuProvider({ children }: { children: React.ReactNode }) {
@@ -254,3 +258,4 @@ export function useMenu() {
   }
   return context;
 }
+
