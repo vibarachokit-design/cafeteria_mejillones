@@ -16,6 +16,16 @@ if (-not (Test-Path (Join-Path $repo '.git'))) {
   throw "No existe el repositorio Git en: $repo"
 }
 
+Push-Location $source
+try {
+  npm run build
+  if ($LASTEXITCODE -ne 0) {
+    throw 'La compilacion local fallo. Revisa el proyecto antes de publicar.'
+  }
+} finally {
+  Pop-Location
+}
+
 $folders = @('.github', 'dist', 'public', 'src', 'supabase')
 foreach ($folder in $folders) {
   $srcFolder = Join-Path $source $folder
@@ -61,9 +71,10 @@ foreach ($file in $files) {
 
 Push-Location $repo
 try {
-  npm run build
-
   & $git add -A
+  if ($LASTEXITCODE -ne 0) {
+    throw 'Git add fallo.'
+  }
 
   $status = & $git status --porcelain
   if (-not $status) {
@@ -72,7 +83,14 @@ try {
   }
 
   & $git commit -m $Message
+  if ($LASTEXITCODE -ne 0) {
+    throw 'Git commit fallo.'
+  }
+
   & $git push origin main
+  if ($LASTEXITCODE -ne 0) {
+    throw 'Git push fallo.'
+  }
 } finally {
   Pop-Location
 }
